@@ -1,7 +1,7 @@
 export default {
-  nodeREST: 'https://testnode1.wavesnodes.com',
-  assetId: 'CjxKp2kfytghpfforkYLSoXHzJyJ5QYKLYQYgN7pQV4E',
-  dApp: '3Mv3BEQ8WS2wzrEXuSfxDm7U9UKb5qLSnUc',
+  nodeREST: 'https://nodes.wavesnodes.com',
+  assetId: '4LHHvYGNKJUg5hj65aGD5vgScvCBmLpdRFtjokvCjSL8',
+  dApp: '3PJbknfXMsJzZmksmsKSMz56tVdDqF5GdNM',
   ordersRefreshInterval: 10000,
   decimalsMul: Math.pow(10, 8),
 };

@@ -77,7 +77,7 @@
               ...order,
               amount: amountLeft / config.decimalsMul,
               price: order.price / config.decimalsMul,
-              total: amountLeft / order.price / config.decimalsMul,
+              total: amountLeft * order.price / config.decimalsMul / config.decimalsMul,
             });
           }
         });
