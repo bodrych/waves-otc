@@ -92,10 +92,10 @@
         },
       },
       vstBalance() {
-        return this.getBalance && this.getBalance[config.assetId] && (`(balance ${this.getBalance[config.assetId]})`);
+        return (this.getBalance && this.getBalance[config.assetId] && (`(balance ${this.getBalance[config.assetId]})`)) || '';
       },
       wavesBalance() {
-        return this.getBalance && this.getBalance['WAVES'] && (`balance ${this.getBalance['WAVES']})`);
+        return (this.getBalance && this.getBalance['WAVES'] && (`(balance ${this.getBalance['WAVES']})`)) || '';
       },
     },
     methods: {
