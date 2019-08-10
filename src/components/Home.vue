@@ -19,13 +19,12 @@
         <template v-slot:item.action="{ item }">
           <v-btn
             @click.prevent="openOrder(item)"
-            class="mx-1" small
-            :disabled="item.owner !== getAddress">
+            class="mx-1" small>
             <i class="fa fa-shopping-cart"></i>
           </v-btn>
           <v-btn
             @click.prevent="doCancelOrder(item)"
-            class="mx-1" small :disabled="item.amount < 0.0000001"><i class="fa fa-sign-out"></i>
+            class="mx-1" small :disabled="(item.owner !== getAddress) || (item.amount < 0.0000001)"><i class="fa fa-sign-out"></i>
           </v-btn>
         </template>
       </v-data-table>
