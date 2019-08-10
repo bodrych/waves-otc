@@ -2,13 +2,6 @@
   <v-container>
     <v-card class="mb-2">
       <v-card-text>
-        <v-btn
-          color="primary"
-          @click.prevent="newOrder"
-          class="mx-1" small><i class="fa fa-edit"></i> new order
-        </v-btn>
-      </v-card-text>
-      <v-card-text>
         <div>VST {{ vstBalance }}</div>
         <div>WAVES {{ wavesBalance }}</div>
       </v-card-text>

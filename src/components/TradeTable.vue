@@ -1,5 +1,12 @@
 <template>
   <v-container>
+    <v-card-text>
+      <v-btn
+        color="primary"
+        @click.prevent="newOrder"
+        class="mx-1" small><i class="fa fa-edit"></i> new order
+      </v-btn>
+    </v-card-text>
     <v-card class="mb-2">
       <v-card-text>
       <v-data-table :items="filteredItems" :headers="headers">
