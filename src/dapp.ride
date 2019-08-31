@@ -1,0 +1,121 @@
+{-# STDLIB_VERSION 3 #-}
+{-# CONTENT_TYPE DAPP #-}
+{-# SCRIPT_TYPE ACCOUNT #-}
+
+let VSTAssetID = base58'4LHHvYGNKJUg5hj65aGD5vgScvCBmLpdRFtjokvCjSL8'
+let eightDecimals = 100000000
+
+@Callable(i)
+func makeSellVST(price:Int) = {
+    if price <= 0 then throw("price must be positive") else
+    let payment = extract(i.payment)
+    if payment.assetId != VSTAssetID then throw("asset id must be " + toBase58String(VSTAssetID)) else
+    let orderId = "sell_" + toBase58String(i.transactionId)
+    WriteSet([
+        DataEntry(orderId + "_amount", payment.amount),
+        DataEntry(orderId + "_price", price),
+        DataEntry(orderId + "_owner", toBase58String(i.caller.bytes)),
+        DataEntry(orderId + "_spent", 0)
+    ])
+}
+
+@Callable(i)
+func makeBuyVST(price:Int) = {
+    if price <= 0 then throw("price must be positive") else
+    let payment = extract(i.payment)
+    if payment.assetId != unit then throw("asset id must be WAVES") else
+    let orderId = "buy_" + toBase58String(i.transactionId)
+    WriteSet([
+        DataEntry(orderId + "_amount", payment.amount * eightDecimals / price),
+        DataEntry(orderId + "_price", price),
+        DataEntry(orderId + "_owner", toBase58String(i.caller.bytes)),
+        DataEntry(orderId + "_spent", 0)
+    ])
+}
+
+@Callable(i)
+func takeSellVST(id:String) = {
+    let orderId = "sell_" + id
+    let payment = extract(i.payment)
+    if payment.assetId != unit then throw("asset must be WAVES") else
+    let owner = this.getStringValue(orderId + "_owner")
+    let price = this.getIntegerValue(orderId + "_price")
+    let wavesAmount = payment.amount
+    let vstAmount = wavesAmount * eightDecimals / price
+    let amount = this.getIntegerValue(orderId + "_amount")
+    let spent = this.getIntegerValue(orderId + "_spent")
+    let newSpent = spent + vstAmount
+    if newSpent > amount then throw("not enougth asset in order") else
+    ScriptResult(
+        WriteSet([
+            DataEntry(orderId + "_spent", newSpent)
+        ]),
+        TransferSet([
+            ScriptTransfer(i.caller, vstAmount, VSTAssetID),
+            ScriptTransfer(extract(addressFromString(owner)), wavesAmount, unit)
+        ])
+    )
+}
+
+@Callable(i)
+func takeBuyVST(id:String) = {
+    let orderId = "buy_" + id
+    let payment = extract(i.payment)
+    if payment.assetId != VSTAssetID then throw("asset must be " + toBase58String(VSTAssetID)) else
+    let owner = this.getStringValue(orderId + "_owner")
+    let price = this.getIntegerValue(orderId + "_price")
+    let vstAmount = payment.amount
+    let wavesAmount = vstAmount * price / eightDecimals
+    let amount = this.getIntegerValue(orderId + "_amount")
+    let spent = this.getIntegerValue(orderId + "_spent")
+    let newSpent = spent + vstAmount
+    if newSpent > amount then throw("not enougth asset in order") else
+    ScriptResult(
+        WriteSet([
+            DataEntry(orderId + "_spent", newSpent)
+        ]),
+        TransferSet([
+            ScriptTransfer(i.caller, wavesAmount, unit),
+            ScriptTransfer(extract(addressFromString(owner)), vstAmount, VSTAssetID)
+        ])
+    )
+}
+
+@Callable(i)
+func returnBuyVST(id:String) = {
+    let orderId = "buy_" + id
+    let owner = this.getStringValue(orderId + "_owner")
+    if owner != toBase58String(i.caller.bytes) then throw("return should be called by order owner") else
+    let amount = this.getIntegerValue(orderId + "_amount")
+    let spent = this.getIntegerValue(orderId + "_spent")
+    let price = this.getIntegerValue(orderId + "_price")
+    let returnAmount = (amount - spent) * price / eightDecimals
+    if returnAmount <= 0 then throw("nothing to return") else
+    ScriptResult(
+        WriteSet([
+            DataEntry(orderId + "_spent", amount)
+        ]),
+        TransferSet([
+            ScriptTransfer(i.caller, returnAmount, unit)
+        ])
+    )
+}
+
+@Callable(i)
+func returnSellVST(id:String) = {
+    let orderId = "sell_" + id
+    let owner = this.getStringValue(orderId + "_owner")
+    if owner != toBase58String(i.caller.bytes) then throw("return should be called by order owner") else
+    let amount = this.getIntegerValue(orderId + "_amount")
+    let spent = this.getIntegerValue(orderId + "_spent")
+    let returnAmount = amount - spent
+    if returnAmount <= 0 then throw("nothing to return") else
+    ScriptResult(
+        WriteSet([
+            DataEntry(orderId + "_spent", amount)
+        ]),
+        TransferSet([
+            ScriptTransfer(i.caller, returnAmount, VSTAssetID)
+        ])
+    )
+}
