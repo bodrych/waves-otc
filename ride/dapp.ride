@@ -1,0 +1,301 @@
+{-# STDLIB_VERSION 3 #-}
+{-# CONTENT_TYPE DAPP #-}
+{-# SCRIPT_TYPE ACCOUNT #-}
+
+let uTokenId = base58'9qh2MiJhfqNS1o3R5wcUrAAWpeqZs9R8SLwQvCx88Vaf'
+
+func checkStatus(address:String) = {
+    let statusUnlimited = match this.getBoolean(address + "_unlimited") {
+        case bool:Boolean => bool
+        case _:Unit => false
+    }
+    let statusTime = match this.getInteger(address + "_time") {
+        case int:Int => int
+        case _:Unit => 0
+    }
+    statusUnlimited || statusTime > lastBlock.timestamp
+}
+
+@Callable(i)
+func addAsset(assetId:String) = {
+    # payment = 100 OTCu or 100 WAVES
+    let addingPrice = 100 * 100000000
+    let addingPriceStr = "100"
+    let payment = i.payment.valueOrErrorMessage("Where is payment?")
+    if payment.assetId.isDefined() && payment.assetId != uTokenId then throw("OTCu or WAVES only") else
+        if payment.amount != addingPrice then throw("You have to pay " + addingPriceStr + " OTCu or WAVES") else
+            if !assetId.fromBase58String().assetInfo().isDefined() then throw("There is no asset with specified id") else
+                # assets whitelist
+                let assets = match this.getString("assets") {
+                    case str:String => str
+                    case _:Unit => ""
+                }
+                if assets.indexOf(assetId).isDefined() then throw("Asset is already available") else
+                    WriteSet([
+                        DataEntry("assets", assets + assetId)
+                    ])
+}
+
+@Callable(i)
+func pro(unlimited:Boolean) = {
+    let address = i.caller.bytes.toBase58String()
+    # payment = 10 OTCu or 10 WAVES for a month or 50 OTCu or 50 WAVES for unlimited
+    let unlimitedPrice = 50 * 100000000
+    let unlimitedPriceStr = "50"
+    let monthPrice = 10 * 100000000
+    let monthPriceStr = "10"
+    let payment = i.payment.valueOrErrorMessage("Where is payment?")
+    if payment.assetId.isDefined() && payment.assetId != uTokenId then throw("OTCu or WAVES only") else
+        if unlimited && payment.amount != unlimitedPrice then throw("You have to pay " + unlimitedPriceStr + " OTCu or WAVES") else
+            if !unlimited && payment.amount != monthPrice then throw("You have to pay " + monthPriceStr + " OTCu or WAVES") else
+                let currentUnlimited = match this.getBoolean(address + "_unlimited") {
+                    case bool:Boolean => bool
+                    case _:Unit => false
+                }
+                let currentTime = match this.getInteger(address + "_time") {
+                    case int:Int => int
+                    case _:Unit => 0
+                }
+                if currentUnlimited then throw("You have unlimited PRO status already. What do you want?") else
+                    # 1 month avg equal to 30.44 days = 2629743 seconds
+                    let month = 2629743000
+                    WriteSet([
+                        DataEntry(address + "_unlimited", unlimited),
+                        DataEntry(address + "_time", if unlimited then 0 else currentTime + month)
+                    ])
+}
+
+@Callable(i)
+func makeSell(priceAsset:String, price:Int, all:Boolean, password:String) = {
+    if priceAsset != "WAVES" && !priceAsset.fromBase58String().assetInfo().isDefined() then throw("There is no asset with specified id") else
+        if price <= 0 then throw("price must be positive") else
+            let payment = i.payment.valueOrErrorMessage("where is payment?")
+            if payment.amount <= 0 then throw("amount must be positive") else
+                let amountAsset = match payment.assetId {
+                    case p:ByteVector => p.toBase58String()
+                    case _ => "WAVES"
+                }
+                let assets = this.getString("assets").valueOrErrorMessage("There are not available assets")
+                if !assets.indexOf(priceAsset).isDefined() || !assets.indexOf(amountAsset).isDefined() then throw("Asset are not available for trading") else
+                    let address = i.caller.bytes.toBase58String()
+                    if !checkStatus(address) && (all || password != "") then throw("You must have pro status to use these features") else
+                        let orderId = i.transactionId.toBase58String()
+                        let orders = match this.getString("orders") {
+                            case s:String => s
+                            case _:Unit => ""
+                        }
+                        let passwordValid = password.fromBase58String()
+                        let data = payment.amount.toString()
+                            + "_" + amountAsset
+                            + "_" + price.toString()
+                            + "_" + priceAsset
+                            + "_" + address # owner
+                            + "_" + all.toString()
+                            + "_" + password
+                            + "_" + 0.toString() # spent
+                        WriteSet([
+                            DataEntry("orders", orders + orderId),
+                            DataEntry(orderId, data)
+                        ])
+}
+
+@Callable(i)
+func makeBuy(amountAsset:String, price:Int, all:Boolean, password:String) = {
+    if amountAsset != "WAVES" && !amountAsset.fromBase58String().assetInfo().isDefined() then throw("There is no asset with specified id") else
+        if price <= 0 then throw("price must be positive") else
+            let payment = i.payment.valueOrErrorMessage("where is payment?")
+            let priceAssetAmount = payment.amount
+            if priceAssetAmount <= 0 then throw("amount must be positive") else
+                let priceAsset = match payment.assetId {
+                    case p:ByteVector => p.toBase58String()
+                    case _ => "WAVES"
+                }
+                let assets = this.getString("assets").valueOrErrorMessage("There are not available assets")
+                if !assets.indexOf(priceAsset).isDefined() || !assets.indexOf(amountAsset).isDefined() then throw("Asset are not available for trading") else
+                    let address = i.caller.bytes.toBase58String()
+                    if !checkStatus(address) && (all || password != "") then throw("You must have pro status to use these features") else
+                        let orderId = i.transactionId.toBase58String()
+                        let orders = match this.getString("orders") {
+                            case s:String => s
+                            case _:Unit => ""
+                        }
+                        let amountAssetDecimals = if amountAsset == "WAVES" then 8 else amountAsset.fromBase58String().assetInfo().value().decimals
+                        let amount = priceAssetAmount * pow(10, 0, 8, 0, 0, CEILING) / price
+                        if amount == 0 then throw("invalid buy amount") else
+                            let data = amount.toString()
+                                + "_" + amountAsset
+                                + "_" + price.toString()
+                                + "_" + priceAsset
+                                + "_" + address
+                                + "_" + all.toString()
+                                + "_" + password
+                                + "_" + 0.toString()
+                            WriteSet([
+                                DataEntry("orders", orders + orderId),
+                                DataEntry(orderId, data)
+                            ])
+}
+
+@Callable(i)
+func takeSell(orderId:String, sig:String) = {
+    let payment = i.payment.valueOrErrorMessage("where is payment?")
+    let priceAssetAmount = payment.amount
+    if priceAssetAmount <= 0 then throw("amount must be positive") else
+        let priceAsset = match payment.assetId {
+            case p:ByteVector => p.toBase58String()
+            case _ => "WAVES"
+        }
+        let data = this.getString(orderId).valueOrErrorMessage("Invalid order id")
+
+        let orderAmount = data.split("_")[0].parseIntValue()
+        let orderAmountAsset = data.split("_")[1]
+        let orderPrice = data.split("_")[2].parseIntValue()
+        let orderPriceAsset = data.split("_")[3]
+        let orderOwner = data.split("_")[4].addressFromString().value()
+        let orderAll = if data.split("_")[5] == "true" then true else false
+        let orderPassword = data.split("_")[6]
+        let orderSpent = data.split("_")[7].parseIntValue()
+
+        if orderPriceAsset != priceAsset then throw("Payment asset must be " + orderPriceAsset) else
+            let valid = if orderPassword != "" then sigVerify(i.callerPublicKey, sig.fromBase58String(), orderPassword.fromBase58String()) else true
+            if !valid then throw("The order is private") else
+                let priceAssetDecimals = if orderPriceAsset == "WAVES" then 8 else orderPriceAsset.fromBase58String().assetInfo().value().decimals
+                let amountAssetDecimals = if orderAmountAsset == "WAVES" then 8 else orderAmountAsset.fromBase58String().assetInfo().value().decimals
+                let amount = priceAssetAmount * pow(10, 0, 8, 0, 0, CEILING) / orderPrice
+                if amount == 0 then throw("Invalid amount") else
+                    if orderAll && (amount < orderAmount) then throw("You must take all or none") else
+                        if amount > orderAmount - orderSpent then throw("Not enougth asset in order") else
+                            let orders = match this.getString("orders") {
+                                case s:String => s
+                                case _:Unit => ""
+                            }
+                            let newData = data.dropRight(data.split("_")[7].size()) + (orderSpent + amount).toString()
+                            let index = orders.indexOf(orderId).value()
+                            let newOrders = if orderAmount == amount + orderSpent then orders.take(index) + orders.drop(index + orderId.size()) else orders
+                            ScriptResult(
+                                WriteSet([
+                                    DataEntry("orders", newOrders),
+                                    DataEntry(orderId, newData)
+                                ]),
+                                TransferSet([
+                                    ScriptTransfer(i.caller, amount, if orderAmountAsset == "WAVES" then unit else orderAmountAsset.fromBase58String()),
+                                    ScriptTransfer(orderOwner, priceAssetAmount, if orderPriceAsset == "WAVES" then unit else orderPriceAsset.fromBase58String())
+                                ])
+                            )
+}
+
+@Callable(i)
+func takeBuy(orderId:String, sig:String) = {
+    let payment = i.payment.valueOrErrorMessage("where is payment?")
+    let amount = payment.amount
+    if amount <= 0 then throw("amount must be positive") else
+        let amountAsset = match payment.assetId {
+            case p:ByteVector => p.toBase58String()
+            case _ => "WAVES"
+        }
+        let data = this.getString(orderId).valueOrErrorMessage("Invalid order id")
+
+        let orderAmount = data.split("_")[0].parseIntValue()
+        let orderAmountAsset = data.split("_")[1]
+        let orderPrice = data.split("_")[2].parseIntValue()
+        let orderPriceAsset = data.split("_")[3]
+        let orderOwner = data.split("_")[4].addressFromString().value()
+        let orderAll = if data.split("_")[5] == "true" then true else false
+        let orderPassword = data.split("_")[6]
+        let orderSpent = data.split("_")[7].parseIntValue()
+
+        if orderAmountAsset != amountAsset then throw("payment asset must be " + orderAmountAsset) else
+            let valid = if orderPassword != "" then sigVerify(i.callerPublicKey, sig.fromBase58String(), orderPassword.fromBase58String()) else true
+            if !valid then throw("The order is private") else
+                let amountAssetDecimals = if orderAmountAsset == "WAVES" then 8 else orderAmountAsset.fromBase58String().assetInfo().value().decimals
+                let priceAssetAmount = amount * orderPrice / pow(10, 0, 8, 0, 0, CEILING)
+                if priceAssetAmount == 0 then throw("invalid amount") else
+                    if orderAll && (priceAssetAmount < orderAmount) then throw("You must take all or none") else
+                        if amount > orderAmount - orderSpent then throw("not enougth asset in order") else
+                            let orders = match this.getString("orders") {
+                                case s:String => s
+                                case _:Unit => ""
+                            }
+                            let newData = data.dropRight(data.split("_")[7].size()) + (orderSpent + amount).toString()
+                            let index = orders.indexOf(orderId).value()
+                            let newOrders = if orderAmount == amount + orderSpent then orders.take(index) + orders.drop(index + orderId.size()) else orders
+                            ScriptResult(
+                                WriteSet([
+                                    DataEntry("orders", newOrders),
+                                    DataEntry(orderId, newData)
+                                ]),
+                                TransferSet([
+                                    ScriptTransfer(i.caller, priceAssetAmount, if orderPriceAsset == "WAVES" then unit else orderPriceAsset.fromBase58String()),
+                                    ScriptTransfer(orderOwner, amount, if orderAmountAsset == "WAVES" then unit else orderAmountAsset.fromBase58String())
+                                ])
+                            )
+}
+
+@Callable(i)
+func returnBuy(orderId:String) = {
+    let data = this.getString(orderId).valueOrErrorMessage("Invalid order id")
+
+    let amount = data.split("_")[0].parseIntValue()
+    let amountAsset = data.split("_")[1]
+    let price = data.split("_")[2].parseIntValue()
+    let priceAsset = data.split("_")[3]
+    let owner = data.split("_")[4].addressFromString().value()
+    let all = if data.split("_")[5] == "true" then true else false
+    let password = data.split("_")[6]
+    let spent = data.split("_")[7].parseIntValue()
+
+    if owner != i.caller then throw("Return should be called by order owner") else
+        let amountAssetDecimals = if amountAsset == "WAVES" then 8 else amountAsset.fromBase58String().assetInfo().value().decimals
+        let returnAmount = (amount - spent) * price / pow(10, 0, amountAssetDecimals, 0, 0, CEILING)
+        if returnAmount <= 0 then throw("nothing to return") else
+            let orders = match this.getString("orders") {
+                case s:String => s
+                case _:Unit => ""
+            }
+            let newData = data.dropRight(data.split("_")[7].size()) + (amount).toString()
+            let index = orders.indexOf(orderId).value()
+            let newOrders = orders.take(index) + orders.drop(index + orderId.size())
+            ScriptResult(
+                WriteSet([
+                    DataEntry("orders", newOrders),
+                    DataEntry(orderId, newData)
+                ]),
+                TransferSet([
+                    ScriptTransfer(i.caller, returnAmount, if priceAsset == "WAVES" then unit else priceAsset.fromBase58String())
+                ])
+            )
+}
+
+@Callable(i)
+func returnSell(orderId:String) = {
+    let data = this.getString(orderId).valueOrErrorMessage("Invalid order id")
+
+    let amount = data.split("_")[0].parseIntValue()
+    let amountAsset = data.split("_")[1]
+    let price = data.split("_")[2].parseIntValue()
+    let priceAsset = data.split("_")[3]
+    let owner = data.split("_")[4].addressFromString().value()
+    let all = if data.split("_")[5] == "true" then true else false
+    let password = data.split("_")[6]
+    let spent = data.split("_")[7].parseIntValue()
+
+    if owner != i.caller then throw("return should be called by order owner") else
+        let returnAmount = amount - spent
+        if returnAmount <= 0 then throw("nothing to return") else
+            let orders = match this.getString("orders") {
+                case s:String => s
+                case _:Unit => ""
+            }
+            let newData = data.dropRight(data.split("_")[7].size()) + (amount).toString()
+            let index = orders.indexOf(orderId).value()
+            let newOrders = orders.take(index) + orders.drop(index + orderId.size())
+            ScriptResult(
+                WriteSet([
+                    DataEntry("orders", newOrders),
+                    DataEntry(orderId, newData)
+                ]),
+                TransferSet([
+                    ScriptTransfer(i.caller, returnAmount, if amountAsset == "WAVES" then unit else amountAsset.fromBase58String())
+                ])
+            )
+}

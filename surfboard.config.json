@@ -1,0 +1,23 @@
+{
+    "ride_directory": "ride",
+    "libs_directory": "libraries",
+    "test_directory": "test",
+    "envs": {
+        "custom": {
+            "API_BASE": "http://localhost:6869/",
+            "CHAIN_ID": "R",
+            "SEED": "waves private node seed with waves tokens",
+            "timeout": 60000
+        },
+        "testnet": {
+            "API_BASE": "https://testnodes.wavesnodes.com/",
+            "CHAIN_ID": "T",
+            "SEED": "void disorder rocket child because sell correct piece oak network fetch chuckle",
+            "timeout": 60000
+        }
+    },
+    "defaultEnv": "custom",
+    "mocha": {
+        "timeout": 60000
+    }
+}
