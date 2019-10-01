@@ -39,7 +39,6 @@ describe('otc test suite', async function () {
     });
     
     it('Assets adding invalid price', async function () {
-        Assert
         const add0Dec = invokeScript({
             dApp: address(accounts.otc),
             call: {
@@ -70,7 +69,7 @@ describe('otc test suite', async function () {
         expect(broadcast(makeSell)).to.be.rejectedWith('Asset are not available for trading')
     })
 
-    it('Assets adding', async function () {
+    it.only('Assets adding', async function () {
         
         const add0Dec = invokeScript({
             dApp: address(accounts.otc),
@@ -129,7 +128,7 @@ describe('otc test suite', async function () {
         await broadcast(takeSell)
     })
 
-    it('Take sell order for dec0:WAVES', async function () {
+    it.only('Take sell order for dec0:WAVES', async function () {
         const makeSell = invokeScript({
             dApp: address(accounts.otc),
             call: {
@@ -228,7 +227,7 @@ describe('otc test suite', async function () {
         await broadcast(takeBuy)
     })
 
-    it('Take buy order for WAVES:dec0', async function () {
+    it.only('Price asset decimals must be greater than or equal to amount asset decimals (WAVES/dec0)', async function () {
         const makeBuy = invokeScript({
             dApp: address(accounts.otc),
             call: {
@@ -243,22 +242,7 @@ describe('otc test suite', async function () {
             payment: [{ assetId: dec0AssetId, amount: 10 }]
         }, accounts.maker);
 
-        await broadcast(makeBuy)
-        await waitForTx(makeBuy.id)
-
-        const takeBuy = invokeScript({
-            dApp: address(accounts.otc),
-            call: {
-                function: 'takeBuy',
-                args: [
-                    { type: 'string', value: makeBuy.id },
-                    { type: 'string', value: '' },
-                ],
-            },
-            payment: [{ assetId: null, amount: 10 ** 8 }]
-        }, accounts.taker);
-
-        await broadcast(takeBuy)
+        expect(broadcast(makeBuy)).to.be.rejectedWith()
     })
     
     // it('Cannot withdraw more than was deposited', async function () {

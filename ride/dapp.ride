@@ -16,6 +16,12 @@ func checkStatus(address:String) = {
     statusUnlimited || statusTime > lastBlock.timestamp
 }
 
+func checkDecimals(amountAsset:String, priceAsset:String) = {
+    let amountAssetDecimals = if amountAsset == "WAVES" then 8 else amountAsset.fromBase58String().assetInfo().value().decimals
+    let priceAssetDecimals = if priceAsset == "WAVES" then 8 else priceAsset.fromBase58String().assetInfo().value().decimals
+    priceAssetDecimals >= amountAssetDecimals
+}
+
 @Callable(i)
 func addAsset(assetId:String) = {
     # payment = 100 OTCu or 100 WAVES
@@ -77,26 +83,27 @@ func makeSell(priceAsset:String, price:Int, all:Boolean, password:String) = {
                 }
                 let assets = this.getString("assets").valueOrErrorMessage("There are not available assets")
                 if !assets.indexOf(priceAsset).isDefined() || !assets.indexOf(amountAsset).isDefined() then throw("Asset are not available for trading") else
-                    let address = i.caller.bytes.toBase58String()
-                    if !checkStatus(address) && (all || password != "") then throw("You must have pro status to use these features") else
-                        let orderId = i.transactionId.toBase58String()
-                        let orders = match this.getString("orders") {
-                            case s:String => s
-                            case _:Unit => ""
-                        }
-                        let passwordValid = password.fromBase58String()
-                        let data = payment.amount.toString()
-                            + "_" + amountAsset
-                            + "_" + price.toString()
-                            + "_" + priceAsset
-                            + "_" + address # owner
-                            + "_" + all.toString()
-                            + "_" + password
-                            + "_" + 0.toString() # spent
-                        WriteSet([
-                            DataEntry("orders", orders + orderId),
-                            DataEntry(orderId, data)
-                        ])
+                    if !checkDecimals(amountAsset, priceAsset) then throw("Price asset decimals must be greater than or equal to amount asset decimals") else
+                        let address = i.caller.bytes.toBase58String()
+                        if !checkStatus(address) && (all || password != "") then throw("You must have pro status to use these features") else
+                            let orderId = i.transactionId.toBase58String()
+                            let orders = match this.getString("orders") {
+                                case s:String => s
+                                case _:Unit => ""
+                            }
+                            let passwordValid = password.fromBase58String()
+                            let data = payment.amount.toString()
+                                + "_" + amountAsset
+                                + "_" + price.toString()
+                                + "_" + priceAsset
+                                + "_" + address # owner
+                                + "_" + all.toString()
+                                + "_" + password
+                                + "_" + 0.toString() # spent
+                            WriteSet([
+                                DataEntry("orders", orders + orderId),
+                                DataEntry(orderId, data)
+                            ])
 }
 
 @Callable(i)
@@ -112,28 +119,29 @@ func makeBuy(amountAsset:String, price:Int, all:Boolean, password:String) = {
                 }
                 let assets = this.getString("assets").valueOrErrorMessage("There are not available assets")
                 if !assets.indexOf(priceAsset).isDefined() || !assets.indexOf(amountAsset).isDefined() then throw("Asset are not available for trading") else
-                    let address = i.caller.bytes.toBase58String()
-                    if !checkStatus(address) && (all || password != "") then throw("You must have pro status to use these features") else
-                        let orderId = i.transactionId.toBase58String()
-                        let orders = match this.getString("orders") {
-                            case s:String => s
-                            case _:Unit => ""
-                        }
-                        let amountAssetDecimals = if amountAsset == "WAVES" then 8 else amountAsset.fromBase58String().assetInfo().value().decimals
-                        let amount = priceAssetAmount * pow(10, 0, 8, 0, 0, CEILING) / price
-                        if amount == 0 then throw("invalid buy amount") else
-                            let data = amount.toString()
-                                + "_" + amountAsset
-                                + "_" + price.toString()
-                                + "_" + priceAsset
-                                + "_" + address
-                                + "_" + all.toString()
-                                + "_" + password
-                                + "_" + 0.toString()
-                            WriteSet([
-                                DataEntry("orders", orders + orderId),
-                                DataEntry(orderId, data)
-                            ])
+                    if !checkDecimals(amountAsset, priceAsset) then throw("Price asset decimals must be greater than or equal to amount asset decimals") else
+                        let address = i.caller.bytes.toBase58String()
+                        if !checkStatus(address) && (all || password != "") then throw("You must have pro status to use these features") else
+                            let orderId = i.transactionId.toBase58String()
+                            let orders = match this.getString("orders") {
+                                case s:String => s
+                                case _:Unit => ""
+                            }
+                            # let amountAssetDecimals = if amountAsset == "WAVES" then 8 else amountAsset.fromBase58String().assetInfo().value().decimals
+                            let amount = priceAssetAmount * pow(10, 0, 8, 0, 0, CEILING) / price
+                            if amount == 0 then throw("invalid buy amount") else
+                                let data = amount.toString()
+                                    + "_" + amountAsset
+                                    + "_" + price.toString()
+                                    + "_" + priceAsset
+                                    + "_" + address
+                                    + "_" + all.toString()
+                                    + "_" + password
+                                    + "_" + 0.toString()
+                                WriteSet([
+                                    DataEntry("orders", orders + orderId),
+                                    DataEntry(orderId, data)
+                                ])
 }
 
 @Callable(i)
@@ -159,8 +167,8 @@ func takeSell(orderId:String, sig:String) = {
         if orderPriceAsset != priceAsset then throw("Payment asset must be " + orderPriceAsset) else
             let valid = if orderPassword != "" then sigVerify(i.callerPublicKey, sig.fromBase58String(), orderPassword.fromBase58String()) else true
             if !valid then throw("The order is private") else
-                let priceAssetDecimals = if orderPriceAsset == "WAVES" then 8 else orderPriceAsset.fromBase58String().assetInfo().value().decimals
-                let amountAssetDecimals = if orderAmountAsset == "WAVES" then 8 else orderAmountAsset.fromBase58String().assetInfo().value().decimals
+                # let priceAssetDecimals = if orderPriceAsset == "WAVES" then 8 else orderPriceAsset.fromBase58String().assetInfo().value().decimals
+                # let amountAssetDecimals = if orderAmountAsset == "WAVES" then 8 else orderAmountAsset.fromBase58String().assetInfo().value().decimals
                 let amount = priceAssetAmount * pow(10, 0, 8, 0, 0, CEILING) / orderPrice
                 if amount == 0 then throw("Invalid amount") else
                     if orderAll && (amount < orderAmount) then throw("You must take all or none") else
@@ -207,7 +215,7 @@ func takeBuy(orderId:String, sig:String) = {
         if orderAmountAsset != amountAsset then throw("payment asset must be " + orderAmountAsset) else
             let valid = if orderPassword != "" then sigVerify(i.callerPublicKey, sig.fromBase58String(), orderPassword.fromBase58String()) else true
             if !valid then throw("The order is private") else
-                let amountAssetDecimals = if orderAmountAsset == "WAVES" then 8 else orderAmountAsset.fromBase58String().assetInfo().value().decimals
+                # let amountAssetDecimals = if orderAmountAsset == "WAVES" then 8 else orderAmountAsset.fromBase58String().assetInfo().value().decimals
                 let priceAssetAmount = amount * orderPrice / pow(10, 0, 8, 0, 0, CEILING)
                 if priceAssetAmount == 0 then throw("invalid amount") else
                     if orderAll && (priceAssetAmount < orderAmount) then throw("You must take all or none") else
@@ -245,8 +253,8 @@ func returnBuy(orderId:String) = {
     let spent = data.split("_")[7].parseIntValue()
 
     if owner != i.caller then throw("Return should be called by order owner") else
-        let amountAssetDecimals = if amountAsset == "WAVES" then 8 else amountAsset.fromBase58String().assetInfo().value().decimals
-        let returnAmount = (amount - spent) * price / pow(10, 0, amountAssetDecimals, 0, 0, CEILING)
+        # let amountAssetDecimals = if amountAsset == "WAVES" then 8 else amountAsset.fromBase58String().assetInfo().value().decimals
+        let returnAmount = (amount - spent) * price / pow(10, 0, 8, 0, 0, CEILING)
         if returnAmount <= 0 then throw("nothing to return") else
             let orders = match this.getString("orders") {
                 case s:String => s
