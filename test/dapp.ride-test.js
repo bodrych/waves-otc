@@ -1,6 +1,6 @@
 describe('otc test suite', async function () {
     
-    // this.timeout(100000);
+    // this.timeout(5000);
     
     let dec0AssetId, dec8AssetId, OTCuId;
 
@@ -69,7 +69,7 @@ describe('otc test suite', async function () {
         expect(broadcast(makeSell)).to.be.rejectedWith('Asset are not available for trading')
     })
 
-    it.only('Assets adding', async function () {
+    it('Assets adding', async function () {
         
         const add0Dec = invokeScript({
             dApp: address(accounts.otc),
@@ -102,12 +102,12 @@ describe('otc test suite', async function () {
                 function: 'makeSell',
                 args: [
                     { type: 'string', value: 'WAVES' },
-                    { type: 'integer', value: '100000000' },
+                    { type: 'integer', value: 1000000000 },
                     { type: 'boolean', value: false },
                     { type: 'string', value: '' },
                 ],
             },
-            payment: [{ assetId: dec8AssetId, amount: 100 * 10 ** 8 }]
+            payment: [{ assetId: dec8AssetId, amount: 10 * 10 ** 8 }]
         }, accounts.maker);
 
         await broadcast(makeSell)
@@ -122,20 +122,20 @@ describe('otc test suite', async function () {
                     { type: 'string', value: '' },
                 ],
             },
-            payment: [{ assetId: null, amount: 10 ** 8 }]
+            payment: [{ assetId: null, amount: 10 * 10 ** 8 }]
         }, accounts.taker);
 
         await broadcast(takeSell)
     })
 
-    it.only('Take sell order for dec0:WAVES', async function () {
+    it('Take sell order for dec0:WAVES', async function () {
         const makeSell = invokeScript({
             dApp: address(accounts.otc),
             call: {
                 function: 'makeSell',
                 args: [
                     { type: 'string', value: 'WAVES' },
-                    { type: 'integer', value: '10000000000000000' },
+                    { type: 'integer', value: 10000000000 },
                     { type: 'boolean', value: false },
                     { type: 'string', value: '' },
                 ],
@@ -168,12 +168,12 @@ describe('otc test suite', async function () {
                 function: 'makeSell',
                 args: [
                     { type: 'string', value: dec0AssetId },
-                    { type: 'integer', value: '1' },
+                    { type: 'integer', value: '10' },
                     { type: 'boolean', value: false },
                     { type: 'string', value: '' },
                 ],
             },
-            payment: [{ assetId: null, amount: 100 * 10 ** 8 }]
+            payment: [{ assetId: null, amount: 10 * 10 ** 8 }]
         }, accounts.taker);
 
         await broadcast(makeSell)
@@ -201,7 +201,7 @@ describe('otc test suite', async function () {
                 function: 'makeBuy',
                 args: [
                     { type: 'string', value: dec0AssetId },
-                    { type: 'integer', value: '10000000000000000' },
+                    { type: 'integer', value: 10 },
                     { type: 'boolean', value: false },
                     { type: 'string', value: '' },
                 ],
@@ -227,14 +227,14 @@ describe('otc test suite', async function () {
         await broadcast(takeBuy)
     })
 
-    it.only('Price asset decimals must be greater than or equal to amount asset decimals (WAVES/dec0)', async function () {
+    it('Take buy order for WAVES/dec0', async function () {
         const makeBuy = invokeScript({
             dApp: address(accounts.otc),
             call: {
                 function: 'makeBuy',
                 args: [
                     { type: 'string', value: 'WAVES' },
-                    { type: 'integer', value: '1' },
+                    { type: 'integer', value: 10 * 10 ** 8 },
                     { type: 'boolean', value: false },
                     { type: 'string', value: '' },
                 ],
@@ -242,8 +242,74 @@ describe('otc test suite', async function () {
             payment: [{ assetId: dec0AssetId, amount: 10 }]
         }, accounts.maker);
 
-        expect(broadcast(makeBuy)).to.be.rejectedWith()
+        await broadcast(makeBuy)
+        await waitForTx(makeBuy.id)
+
+        const takeBuy = invokeScript({
+            dApp: address(accounts.otc),
+            call: {
+                function: 'takeBuy',
+                args: [
+                    { type: 'string', value: makeBuy.id },
+                    { type: 'string', value: '' },
+                ],
+            },
+            payment: [{ assetId: null, amount: 1 * 10 ** 8 }]
+        }, accounts.taker);
+
+        await broadcast(takeBuy)
     })
+
+    it('Take buy order for dec8/WAVES', async function () {
+        const makeBuy = invokeScript({
+            dApp: address(accounts.otc),
+            call: {
+                function: 'makeBuy',
+                args: [
+                    { type: 'string', value: dec8AssetId },
+                    { type: 'integer', value: 10 * 10 ** 8 },
+                    { type: 'boolean', value: false },
+                    { type: 'string', value: '' },
+                ],
+            },
+            payment: [{ assetId: null, amount: 10 * 10 ** 8 }]
+        }, accounts.taker);
+
+        await broadcast(makeBuy)
+        await waitForTx(makeBuy.id)
+
+        const takeBuy = invokeScript({
+            dApp: address(accounts.otc),
+            call: {
+                function: 'takeBuy',
+                args: [
+                    { type: 'string', value: makeBuy.id },
+                    { type: 'string', value: '' },
+                ],
+            },
+            payment: [{ assetId: dec8AssetId, amount: 1 * 10 ** 8 }]
+        }, accounts.maker);
+
+        await broadcast(takeBuy)
+    })
+
+    // it('Price asset decimals must be greater than or equal to amount asset decimals (WAVES/dec0)', async function () {
+    //     const makeBuy = invokeScript({
+    //         dApp: address(accounts.otc),
+    //         call: {
+    //             function: 'makeBuy',
+    //             args: [
+    //                 { type: 'string', value: 'WAVES' },
+    //                 { type: 'integer', value: '1' },
+    //                 { type: 'boolean', value: false },
+    //                 { type: 'string', value: '' },
+    //             ],
+    //         },
+    //         payment: [{ assetId: dec0AssetId, amount: 10 }]
+    //     }, accounts.maker);
+
+    //     expect(broadcast(makeBuy)).to.be.rejectedWith()
+    // })
     
     // it('Cannot withdraw more than was deposited', async function () {
     //     const iTxFoo = invokeScript({
