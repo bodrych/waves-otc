@@ -23,7 +23,7 @@
             suffix="WAVES"
             readonly
         ></v-text-field>
-		<v-btn text color="primary" @click="buyOTCuFromDex">Buy</v-btn>
+		<v-btn text color="primary" @click="buyOTCuFromDex" :loading="buyLoading">Buy</v-btn>
 	</v-alert>
 </template>
 
@@ -45,7 +45,8 @@
                 dexData: {},
                 dexPriceAssetAmount: 0,
                 dexPrice: 0,
-                dexMaxBuyAmount: 0,
+				dexMaxBuyAmount: 0,
+				buyLoading: false,
 			}
 		},
 		watch: {
@@ -70,8 +71,15 @@
 			...mapActions(['fetchDexOrderbook', 'dexBuy']),
 			async buyOTCuFromDex() {
 				try {
-					await this.dexBuy({ amount: this.amount * 10 ** 8, price: this.dexData.price })
+					this.buyLoading = true;
+					await this.dexBuy({
+						amount: this.amount * 1e8,
+						price: this.dexData.price,
+						wait: true,
+					})
+					this.buyLoading = false;
 				} catch(e) {
+					this.buyLoading = false;
 					this.$notify({ type: 'error', text: e.message || 'Error' });
 				}
 			},

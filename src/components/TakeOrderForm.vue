@@ -38,7 +38,7 @@
 			</v-card-text>
 			<v-card-actions>
 				<v-spacer />
-				<v-btn text color="primary" @click.stop="take">Take</v-btn>
+				<v-btn text color="primary" @click.stop="take" :loading="takeLoading">Take</v-btn>
 				<v-btn text color="primary" @click.stop="closeOrderTakeDialog">Close</v-btn>
 			</v-card-actions>
 		</v-card>
@@ -47,7 +47,7 @@
 
 <script>
 	import { mapGetters, mapActions } from 'vuex';
-	import utils from '../utils'
+	import utils from '@/utils'
 
 	export default {
 		components: {
@@ -57,6 +57,7 @@
 				amount: null,
 				priceAssetAmount: null,
 				password: '',
+				takeLoading: false,
 			}
 		},
 		watch: {
@@ -85,6 +86,7 @@
 				'getTakeOrder',
 				'orderTakeDialogDisplay',
 				'getAssetBalanceFloat',
+				'getApiBase',
 			]),
 			dialogDisplay: {
 				get() {
@@ -96,32 +98,42 @@
 			},
 		},
 		methods: {
-			...mapActions(['takeSell', 'takeBuy', 'closeOrderTakeDialog']),
+			...mapActions([
+				'takeSell',
+				'takeBuy',
+				'closeOrderTakeDialog',
+				'fetchOrders',
+			]),
 			async take() {
-				let signature = '';
-				if (this.getTakeOrder.password !== '') {
-					const kp = utils.keyPair(this.password);
-					signature = utils.signBytes({ privateKey:  kp.privateKey }, this.getPublicKey);
-				}
-				let params = {};
-				if (this.getTakeOrder.type === 'sell') {
-					params = {
-						orderId: this.getTakeOrder.id,
-						priceAssetAmount: this.priceAssetAmount * 10 ** this.getAssets[this.getTakeOrder.priceAsset].decimals,
-						priceAsset: this.getTakeOrder.priceAsset,
-						signature,
-					}
-				} else {
-					params = {
-						orderId: this.getTakeOrder.id,
-						amount: this.amount  * 10 ** this.getAssets[this.getTakeOrder.amountAsset].decimals,
-						amountAsset: this.getTakeOrder.amountAsset,
-						signature,
-					}
-				}
 				try {
+					this.takeLoading = true;
+					let signature = '';
+					if (this.getTakeOrder.password !== '') {
+						const kp = utils.keyPair(this.password);
+						signature = utils.signBytes({ privateKey:  kp.privateKey }, this.getPublicKey);
+					}
+					let params = {};
+					if (this.getTakeOrder.type === 'sell') {
+						params = {
+							orderId: this.getTakeOrder.id,
+							priceAssetAmount: this.priceAssetAmount * 10 ** this.getAssets[this.getTakeOrder.priceAsset].decimals,
+							priceAsset: this.getTakeOrder.priceAsset,
+							signature,
+						}
+					} else {
+						params = {
+							orderId: this.getTakeOrder.id,
+							amount: this.amount  * 10 ** this.getAssets[this.getTakeOrder.amountAsset].decimals,
+							amountAsset: this.getTakeOrder.amountAsset,
+							signature,
+							wait: true,
+						}
+					}
 					this.getTakeOrder.type === 'sell' ? await this.takeSell(params) : await this.takeBuy(params);
+					await this.fetchOrders();
+					this.takeLoading = false;
 				} catch (e) {
+					this.takeLoading = false;
 					this.$notify({ type: 'error', text: e.message });
 				}
 			}

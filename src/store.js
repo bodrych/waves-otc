@@ -102,28 +102,28 @@ export default new Vuex.Store({
       await dispatch('fetchBalance');
     },
     
-    makeSell(ctx, { amount, amountAsset, priceAssetAmount, priceAsset, all, password }) {
-      return API.makeSell({ amount, amountAsset, priceAssetAmount, priceAsset, all, password });
+    makeSell({ getters }, params) {
+      return API.makeSell({ ...params, apiBase: getters.getApiBase });
     },
     
-    makeBuy(ctx, { amount, amountAsset, priceAssetAmount, priceAsset, all, password }) {
-      return API.makeBuy({ amount, amountAsset, priceAssetAmount, priceAsset, all, password });
+    makeBuy({ getters }, params) {
+      return API.makeBuy({ ...params, apiBase: getters.getApiBase });
     },
     
-    takeSell(ctx, { orderId, priceAssetAmount, priceAsset, signature }) {
-      return API.takeSell({ orderId, priceAssetAmount, priceAsset, signature });
+    takeSell({ getters }, params) {
+      return API.takeSell({ ...params, apiBase: getters.getApiBase });
     },
 
-    takeBuy(ctx, { orderId, amount, amountAsset, signature }) {
-      return API.takeBuy({ orderId, amount, amountAsset, signature });
+    takeBuy({ getters }, params) {
+      return API.takeBuy({ ...params, apiBase: getters.getApiBase });
     },
 
-    buyPro(ctx, unlimited) {
-      return API.buyPro(unlimited);
+    buyPro({ getters }, params) {
+      return API.buyPro({ ...params, apiBase: getters.getApiBase });
     },
 
-    buyUtilityTokenDApp(ctx, amount) {
-      return API.buyUtilityTokenDApp(amount);
+    buyUtilityTokenDApp({ getters }, params) {
+      return API.buyUtilityTokenDApp({ ...params, apiBase: getters.getApiBase });
     },
 
     setCurrentPair({ commit }, pair) {
@@ -153,8 +153,8 @@ export default new Vuex.Store({
       commit('updateOrders', orders);
     },
 
-    cancelOrder(ctx, { id, type }) {
-      return API.cancelOrder({ id, type });
+    cancelOrder({ getters }, params) {
+      return API.cancelOrder({ ...params, apiBase: getters.getApiBase });
     },
 
     async fetchAddressStatus({ commit, getters }) {
@@ -176,12 +176,12 @@ export default new Vuex.Store({
       }
     },
 
-    addAsset(ctx, { asset, inWaves }) {
-      return API.addAsset({ asset, inWaves });
+    addAsset({ getters }, params) {
+      return API.addAsset({ ...params, apiBase: getters.getApiBase });
     },
 
-    dexBuy(ctx, { amount, price }) {
-      return API.dexBuy({ amount, price });
+    dexBuy({ getters }, params) {
+      return API.dexBuy({ ...params, apiBase: getters.getApiBase });
     },
 
     async showUpgradeDialog({ commit, dispatch }) {

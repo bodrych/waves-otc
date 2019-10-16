@@ -27,7 +27,7 @@
                     </v-card-text>
                     <v-card-actions>
                         <v-spacer />
-                        <v-btn text color="primary" @click="doAddAsset()" :disabled="!getLogin">Add asset</v-btn>
+                        <v-btn text color="primary" @click="doAddAsset()" :disabled="!getLogin" :loading="addAssetLoading">Add asset</v-btn>
                         <v-btn text color="primary" @click="dialog = false">Close</v-btn>
                     </v-card-actions>
                 </v-card>
@@ -70,7 +70,7 @@
     import { mapGetters, mapActions } from 'vuex';
     import BuyDApp from '@/components/BuyDApp';
     import BuyDEX from '@/components/BuyDEX';
-    import config from '@/config'
+    import config from '@/config';
 
     export default {
         data: () => ({
@@ -81,26 +81,52 @@
             headers: [
                 { text: 'Pair', value: 'amountAssetName' },
             ],
+            addAssetLoading: false,
         }),
         components: {
             BuyDApp,
             BuyDEX,
         },
         computed: {
-            ...mapGetters(['getPairs', 'getCurrentPair', 'getAssets', 'getLogin', 'getBalance', 'uTokenRefill']),
+            ...mapGetters([
+                'getPairs',
+                'getCurrentPair',
+                'getAssets',
+                'getLogin',
+                'getBalance',
+                'uTokenRefill'
+            ]),
 			balance() {
 				return this.getLogin && this.getBalance && this.getBalance[config.OTCu] ? +(this.getBalance[config.OTCu] / 10 ** 8).toFixed(8) : 0;
 			},
         },
         methods: {
-            ...mapActions(['checkKeeper', 'fetchDexOrderbook', 'fetchDAppBalance', 'addAsset', 'setCurrentPair']),
+            ...mapActions([
+                'fetchDexOrderbook',
+                'fetchDAppBalance',
+                'addAsset',
+                'setCurrentPair',
+                'fetchAvailableAssetsDetails',
+            ]),
             showDialog() {
                 this.dialog = true;
                 this.fetchDexOrderbook();
                 this.fetchDAppBalance();
             },
             async doAddAsset() {
-                await this.addAsset({ asset: this.asset, inWaves: this.uTokenRefill(this.requiredAmount).inWaves })
+                try {
+                    this.addAssetLoading = true;
+                    await this.addAsset({
+                        asset: this.asset,
+                        inWaves: this.uTokenRefill(this.requiredAmount).inWaves,
+                        wait: true,
+                    });
+					await this.fetchAvailableAssetsDetails();
+					this.addAssetLoading = false;
+                } catch (e) {
+					this.addAssetLoading = false;
+                    this.$notify({ type: 'error', text: e.message || 'Error' });
+                }
             },
             selectPair: function (item) {
                 this.setCurrentPair({

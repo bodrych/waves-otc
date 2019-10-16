@@ -15,7 +15,7 @@
 			suffix="WAVES"
 			readonly
 		></v-text-field>
-		<v-btn text color="primary" @click="buyOTCuFromDApp">Buy</v-btn>
+		<v-btn text color="primary" @click="buyOTCuFromDApp" :loading="buyLoading">Buy</v-btn>
 	</v-alert>
 </template>
 
@@ -34,6 +34,7 @@
 		data() {
 			return {
 				amount: this.targetAmount,
+				buyLoading: false,
 			}
 		},
 		watch: {
@@ -42,14 +43,22 @@
 			},
 		},
 		computed: {
-			...mapGetters(['getLogin', 'getDAppBalance']),
+			...mapGetters([
+				'getLogin',
+				'getDAppBalance'
+			]),
 		},
 		methods: {
-			...mapActions(['buyUtilityTokenDApp']),
+			...mapActions([
+				'buyUtilityTokenDApp'
+			]),
 			async buyOTCuFromDApp() {
 				try {
-					await this.buyUtilityTokenDApp(this.amount * 10 ** 8);
+					this.buyLoading = true;
+					await this.buyUtilityTokenDApp({ amount: this.amount * 1e8, wait: true });
+					this.buyLoading = false;
 				} catch(e) {
+					this.buyLoading = false;
 					this.$notify({ type: 'error', text: e.message || 'Error' });
 				}
 			},

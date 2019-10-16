@@ -67,13 +67,24 @@
 			TakeOrderForm,
 		},
 		computed: {
-			...mapGetters(['getCurrentPair', 'getAddress', 'checkStatus', 'orderTakeDialogDisplay']),
+			...mapGetters([
+				'getCurrentPair',
+				'getAddress',
+				'checkStatus',
+				'orderTakeDialogDisplay'
+			]),
 		},
 		methods: {
-			...mapActions(['takeSell, takeBuy', 'cancelOrder', 'showOrderTakeDialog', 'closeOrderTakeDialog']),
+			...mapActions([
+				'cancelOrder',
+				'showOrderTakeDialog',
+				'closeOrderTakeDialog',
+				'fetchOrders',
+			]),
 			async doCancelOrder(order) {
 				try {
-					await this.cancelOrder({ id: order.id, type: order.type });
+					await this.cancelOrder({ id: order.id, type: order.type, wait: true });
+					await this.fetchOrders();
 				} catch (e) {
 					this.$notify({ type: 'error', text: e.message || 'Error' });
 				}

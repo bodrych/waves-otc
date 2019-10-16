@@ -1,7 +1,7 @@
 import axios from 'axios';
 import config from './config';
 import _ from 'lodash';
-import { nodeInteraction } from '@waves/waves-transactions';
+import { nodeInteraction, waitForTx } from '@waves/waves-transactions';
 
 // const mapKV = (list) => {
 //   const kv = {};
@@ -80,7 +80,7 @@ export const fetchOrders = async (apiBase) => {
   }
 }
 
-export const makeSell = async ({ amount, amountAsset, priceAssetAmount, priceAsset, all, password }) => {
+export const makeSell = async ({ amount, amountAsset, priceAssetAmount, priceAsset, all, password, wait, apiBase }) => {
   const tx = {
     type: 16,
     data: {
@@ -105,13 +105,18 @@ export const makeSell = async ({ amount, amountAsset, priceAssetAmount, priceAss
     },
   };
   try {
-    return await window.WavesKeeper.signAndPublishTransaction(tx);
+    const response = await window.WavesKeeper.signAndPublishTransaction(tx);
+    if (wait) {
+      const data = JSON.parse(response);
+      await waitForTx(data.id, { apiBase });
+    }
+    return response;
   } catch (e) {
     throw e
   }
 }
 
-export const makeBuy = async ({ amount, amountAsset, priceAssetAmount, priceAsset, all, password }) => {
+export const makeBuy = async ({ amount, amountAsset, priceAssetAmount, priceAsset, all, password, wait, apiBase }) => {
   const tx = {
     type: 16,
     data: {
@@ -136,13 +141,18 @@ export const makeBuy = async ({ amount, amountAsset, priceAssetAmount, priceAsse
     },
   };
   try {
-    return await window.WavesKeeper.signAndPublishTransaction(tx);
+    const response = await window.WavesKeeper.signAndPublishTransaction(tx);
+    if (wait) {
+      const data = JSON.parse(response);
+      await waitForTx(data.id, { apiBase });
+    }
+    return response;
   } catch (e) {
     throw e
   }
 }
 
-export const takeSell = async ({ orderId, priceAssetAmount, priceAsset, signature }) => {
+export const takeSell = async ({ orderId, priceAssetAmount, priceAsset, signature, wait, apiBase }) => {
   const tx = {
     type: 16,
     data: {
@@ -165,13 +175,18 @@ export const takeSell = async ({ orderId, priceAssetAmount, priceAsset, signatur
     },
   };
   try {
-    return await window.WavesKeeper.signAndPublishTransaction(tx);
+    const response = await window.WavesKeeper.signAndPublishTransaction(tx);
+    if (wait) {
+      const data = JSON.parse(response);
+      await waitForTx(data.id, { apiBase });
+    }
+    return response;
   } catch (e) {
     throw e
   }
 }
 
-export const takeBuy = async ({ orderId, amount, amountAsset, signature }) => {
+export const takeBuy = async ({ orderId, amount, amountAsset, signature, wait, apiBase }) => {
   const tx = {
     type: 16,
     data: {
@@ -194,13 +209,18 @@ export const takeBuy = async ({ orderId, amount, amountAsset, signature }) => {
     },
   };
   try {
-    return await window.WavesKeeper.signAndPublishTransaction(tx);
+    const response = await window.WavesKeeper.signAndPublishTransaction(tx);
+    if (wait) {
+      const data = JSON.parse(response);
+      await waitForTx(data.id, { apiBase });
+    }
+    return response;
   } catch (e) {
     throw e
   }
 }
 
-export const cancelOrder = async ({ id, type }) => {
+export const cancelOrder = async ({ id, type, wait, apiBase }) => {
   const tx = {
     type: 16,
     data: {
@@ -219,13 +239,18 @@ export const cancelOrder = async ({ id, type }) => {
     },
   };
   try {
-    return await window.WavesKeeper.signAndPublishTransaction(tx);
+    const response = await window.WavesKeeper.signAndPublishTransaction(tx);
+    if (wait) {
+      const data = JSON.parse(response);
+      await waitForTx(data.id, { apiBase });
+    }
+    return response;
   } catch (e) {
     throw e
   }
 }
 
-export const buyPro = async (unlimited) => {
+export const buyPro = async ({ unlimited, wait, apiBase }) => {
   const tx = {
     type: 16,
     data: {
@@ -247,13 +272,18 @@ export const buyPro = async (unlimited) => {
     },
   };
   try {
-    return await window.WavesKeeper.signAndPublishTransaction(tx);
+    const response = await window.WavesKeeper.signAndPublishTransaction(tx);
+    if (wait) {
+      const data = JSON.parse(response);
+      await waitForTx(data.id, { apiBase });
+    }
+    return response;
   } catch (e) {
     throw e
   }
 }
 
-export const addAsset = async ({ asset, inWaves }) => {
+export const addAsset = async ({ asset, inWaves, wait, apiBase }) => {
   const tx = {
     type: 16,
     data: {
@@ -277,13 +307,18 @@ export const addAsset = async ({ asset, inWaves }) => {
     },
   };
   try {
-    return await window.WavesKeeper.signAndPublishTransaction(tx);
+    const response = await window.WavesKeeper.signAndPublishTransaction(tx);
+    if (wait) {
+      const data = JSON.parse(response);
+      await waitForTx(data.id, { apiBase });
+    }
+    return response;
   } catch (e) {
     throw e
   }
 }
 
-export const buyUtilityTokenDApp = async (amount) => {
+export const buyUtilityTokenDApp = async ({ amount, wait, apiBase }) => {
   const tx = {
     type: 16,
     data: {
@@ -305,7 +340,12 @@ export const buyUtilityTokenDApp = async (amount) => {
     },
   };
   try {
-    return await window.WavesKeeper.signAndPublishTransaction(tx);
+    const response = await window.WavesKeeper.signAndPublishTransaction(tx);
+    if (wait) {
+      const data = JSON.parse(response);
+      await waitForTx(data.id, { apiBase });
+    }
+    return response;
   } catch (e) {
     throw e
   }
@@ -321,7 +361,7 @@ export const fetchDexOrderbook = async (asset1, asset2) => {
   return response.data;
 }
 
-export const dexBuy = async ({ amount, price }) => {
+export const dexBuy = async ({ amount, price, wait, apiBase }) => {
   const response = await axios.get(`${config.matcherApiBase}/matcher`);
   const matcherPublicKey = response.data;
   const time = Date.now();
@@ -349,7 +389,12 @@ export const dexBuy = async ({ amount, price }) => {
     }
   }
   try {
-    return await window.WavesKeeper.signAndPublishOrder(order);
+    const response = await window.WavesKeeper.signAndPublishOrder(order);
+    if (wait) {
+      const data = JSON.parse(response);
+      await waitForTx(data.id, { apiBase });
+    }
+    return response;
   } catch (e) {
     throw e
   }

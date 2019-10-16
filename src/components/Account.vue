@@ -49,7 +49,7 @@
 				</v-card-text>
 				<v-card-actions>
 					<v-spacer />
-					<v-btn text color="primary" @click="doBuyPro(targetStatus)" :disabled="!getLogin">Buy PRO</v-btn>
+					<v-btn text color="primary" @click="doBuyPro(targetStatus)" :disabled="!getLogin" :loading="buyProLoading">Buy PRO</v-btn>
 					<v-btn text color="primary" @click="closeUpgradeDialog">Close</v-btn>
 				</v-card-actions>
 			</v-card>
@@ -79,6 +79,7 @@
 				dexPrice: 1,
 				dexPriceAssetAmount: 1,
 				dexMaxBuyAmount: 1,
+				buyProLoading: false,
 			}
 		},
         components: {
@@ -135,6 +136,7 @@
 				'fetchDAppBalance',
 				'showUpgradeDialog',
 				'closeUpgradeDialog',
+				'fetchAddressStatus',
 			]),
 			showDialog() {
 				this.dialog = true;
@@ -143,8 +145,12 @@
 			},
 			async doBuyPro(unlimited) {
 				try {
-					await this.buyPro(unlimited);
+					this.buyProLoading = true;
+					await this.buyPro({ unlimited, wait: true });
+					await this.fetchAddressStatus;
+					this.buyProLoading = false;
 				} catch(e) {
+					this.buyProLoading = false;
 					this.$notify({ type: 'error', text: e.message || 'Error' });
 				}
 			},

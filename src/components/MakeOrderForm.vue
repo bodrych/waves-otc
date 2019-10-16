@@ -73,7 +73,7 @@
 			</v-card-text>
 			<v-card-actions>
 				<v-spacer />
-				<v-btn text color="primary" @click="create">Create</v-btn>
+				<v-btn text color="primary" @click="create" :loading="createLoading">Create</v-btn>
 				<v-btn text color="primary" @click="dialog = false">Close</v-btn>
 			</v-card-actions>
 		</v-card>
@@ -82,7 +82,7 @@
 
 <script>
 	import { mapGetters, mapActions } from 'vuex';
-	import utils from '../utils'
+	import utils from '@/utils'
 	import _ from 'lodash';
 
 	export default {
@@ -106,6 +106,7 @@
 				all: false,
 				password: this.generate(),
 				assetsArray: [],
+				createLoading: false,
 			}
 		},
 		watch: {
@@ -143,6 +144,7 @@
 				'checkStatus',
 				'getBalance',
 				'getAssetBalanceFloat',
+				'getApiBase',
 			]),
 			orderInfo() {
 				return `${_.capitalize(this.orderType)} ${this.amount} ${this.getAssets[this.amountAsset].name} for ${this.priceAssetAmount} ${this.getAssets[this.priceAsset].name}`;
@@ -167,6 +169,7 @@
 				'makeSell',
 				'makeBuy',
 				'showUpgradeDialog',
+				'fetchOrders',
 			]),
 			generate() {
 				return utils.randomValue(16)
@@ -175,22 +178,27 @@
 				return item.id === 'WAVES' ? 'WAVES' : item.name + ': ' + item.id;
 			},
 			async create() {
-				let pk = '';
-				if (this.passwordProtected) {
-					const kp = utils.keyPair(this.password)
-					pk = kp.publicKey
-				}
-				const params = {
-					amount: parseFloat(this.amount) * 10 ** this.getAssets[this.amountAsset].decimals,
-					amountAsset: this.amountAsset || this.getCurrentPair.amountAsset,
-					priceAssetAmount: parseFloat(this.priceAssetAmount) * 10 ** this.getAssets[this.priceAsset].decimals,
-					priceAsset: this.priceAsset || this.getCurrentPair.priceAsset,
-					all: this.all,
-					password: pk,
-				}
 				try {
+					this.createLoading = true;
+					let pk = '';
+					if (this.passwordProtected) {
+						const kp = utils.keyPair(this.password)
+						pk = kp.publicKey
+					}
+					const params = {
+						amount: parseFloat(this.amount) * 10 ** this.getAssets[this.amountAsset].decimals,
+						amountAsset: this.amountAsset || this.getCurrentPair.amountAsset,
+						priceAssetAmount: parseFloat(this.priceAssetAmount) * 10 ** this.getAssets[this.priceAsset].decimals,
+						priceAsset: this.priceAsset || this.getCurrentPair.priceAsset,
+						all: this.all,
+						password: pk,
+						wait: true,
+					}
 					this.orderType === 'sell' ? await this.makeSell(params) : await this.makeBuy(params);
+					await this.fetchOrders();
+					this.createLoading = false;
 				} catch (e) {
+					this.createLoading = false;
 					this.$notify({ type: 'error', text: e.message });
 				}
 			},
