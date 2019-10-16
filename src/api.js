@@ -392,7 +392,7 @@ export const dexBuy = async ({ amount, price, wait, apiBase }) => {
     const response = await window.WavesKeeper.signAndPublishOrder(order);
     if (wait) {
       const data = JSON.parse(response);
-      await waitForTx(data.id, { apiBase });
+      // await waitForTx(data.id, { apiBase });
     }
     return response;
   } catch (e) {
