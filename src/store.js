@@ -3,7 +3,6 @@ import Vuex from 'vuex'
 import * as API from './api';
 import config from '@/config';
 import _ from 'lodash';
-// import config from './config'
 // import VuexPersistence from 'vuex-persist'
 
 Vue.use(Vuex)
@@ -18,7 +17,18 @@ export default new Vuex.Store({
   state: {
     login: false,
     publicState: null,
-    assets: {},
+    assets: {
+      'WAVES': {
+        id: 'WAVES',
+        name: 'WAVES',
+        decimals: 8,
+      },
+      '4LHHvYGNKJUg5hj65aGD5vgScvCBmLpdRFtjokvCjSL8': {
+        id: '4LHHvYGNKJUg5hj65aGD5vgScvCBmLpdRFtjokvCjSL8',
+        name: 'Vostok',
+        decimals: 8,
+      }
+    },
     orders: [],
     balance: null,
     dAppBalance: null,
@@ -248,7 +258,7 @@ export default new Vuex.Store({
         return {
           userOTCu: getters.getLogin && getters.getBalance ? getters.getBalance[config.OTCu] >= amount : true,
           userWaves: getters.getLogin && getters.getBalance? getters.getBalance['WAVES'] >= amount : true,
-          dex: getters.getDexSuitableAmount >= amount,
+          dex: getters.getDexSuitableAmount >= 0,
           dApp: getters.getDexSuitableAmount >= amount,
         }
       },

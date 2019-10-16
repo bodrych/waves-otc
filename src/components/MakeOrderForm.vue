@@ -49,7 +49,7 @@
 					label="Price asset amount"
 					:rules="[v => !!v || 'Item is required', v => v > 0 && !isNaN(parseFloat(v)) || 'Invalid price asset amount']"
 				></v-text-field>
-				{{ amount }} {{ getAssets[amountAsset].name }} for {{ priceAssetAmount }} {{ getAssets[priceAsset].name }}
+				{{ orderInfo }}
 				<v-switch
 					:disabled="!checkStatus"
 					v-model="all"
@@ -81,6 +81,7 @@
 <script>
 	import { mapGetters, mapActions } from 'vuex';
 	import utils from '../utils'
+	import _ from 'lodash';
 
 	export default {
 		props: {
@@ -142,6 +143,9 @@
 				'getAssetsArray',
 				'checkStatus',
 			]),
+			orderInfo() {
+				return `${_.capitalize(this.orderType)} ${this.amount} ${this.getAssets[this.amountAsset].name} for ${this.priceAssetAmount} ${this.getAssets[this.priceAsset].name}`;
+			}
 		},
 		methods: {
 			...mapActions([

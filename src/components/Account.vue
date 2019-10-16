@@ -50,9 +50,8 @@
 </template>
 
 <script>
-	import { mapMutations, mapGetters, mapActions } from 'vuex';
+	import { mapGetters, mapActions } from 'vuex';
 	import config from '../config';
-	import { calcDexBuyData } from '../api';
     import BuyDApp from '@/components/BuyDApp';
     import BuyDEX from '@/components/BuyDEX';
 

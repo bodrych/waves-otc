@@ -20,7 +20,7 @@ export const fetchAddressStatus = async (address) => {
   try {
     const unlimitedData = await nodeInteraction.accountDataByKey(address + '_unlimited', config.dApp, apiBase);
     const deadlineData = await nodeInteraction.accountDataByKey(address + '_time', config.dApp, apiBase);
-    const unlimited = unlimitedData.value === 'true';
+    const unlimited = unlimitedData.value === true;
     const deadline = parseInt(deadlineData.value);
     return { unlimited, deadline }
   } catch(e) {

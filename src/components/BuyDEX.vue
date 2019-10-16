@@ -55,6 +55,7 @@
 			amount: {
 				immediate: true,
 				async handler(amount) {
+					await this.fetchDexOrderbook();
 					this.dexData = this.calcDexBuyData(amount * 10 ** 8);
 					this.dexPriceAssetAmount = +(this.dexData.priceAssetAmount / 10 ** 8).toFixed(8)
 					this.dexPrice = +(this.dexData.price / 10 ** 8).toFixed(8)
