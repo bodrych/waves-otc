@@ -1,5 +1,12 @@
 <template>
   <v-app>
+    <notifications position="bottom right" :duration="10000" width="25%">
+      <template slot="body" slot-scope="props">
+        <v-alert :type="props.item.type" class="mr-2" dismissible @input="props.close">
+          {{ props.item.text }}
+        </v-alert>
+      </template>
+    </notifications>
     <v-app-bar app short dark color="primary">
       <v-toolbar-title class="headline text-uppercase">
         <span>OTC</span>
@@ -24,5 +31,5 @@ export default {
   #content {
     height: calc(100vh - 56px);
   }
-  html { overflow-y: auto !important }
+  /* html { overflow-y: auto !important } */
 </style>

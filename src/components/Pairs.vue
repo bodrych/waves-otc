@@ -1,79 +1,125 @@
 <template>
-	<v-card class="d-flex flex-column flex-grow-1" style="height: 100%" outlined>
-		<v-card-title>
-			<span class="title">Available pairs</span>
-      <v-spacer></v-spacer>
-      <v-tooltip bottom>
-        <template v-slot:activator="{ on }">
-          <v-btn small text v-on="on" color="primary">
-            Add asset
-            <template v-slot:loader>Wait...</template>
-          </v-btn>
-        </template>
-        <span>Add new asset</span>
-      </v-tooltip>
-		</v-card-title>
-		<v-card-text class="d-flex" style="overflow: auto">
-			<v-data-table
-			class="d-flex flex-column"
-			style="width: 100%"
-			:headers="headers"
-			:items="pairs"
-			:search="search"
-			:custom-filter="dataFilter"
-			:items-per-page="pairs.length"
-			hide-default-footer
-			height="100%"
-			>
-			<template v-slot:top>
-				<v-text-field v-model="search" label="Search" prepend-inner-icon="mdi-magnify" clearable>
-					<template v-slot:append>
-						<v-tooltip bottom>
-							<template v-slot:activator="{ on }">
-								<v-icon v-on="on">mdi-help-circle-outline</v-icon>
-							</template>
-							I'm a tooltip
-						</v-tooltip>
-					</template>
-				</v-text-field>
-			</template>
-		</v-data-table>
-	</v-card-text>
+    <v-card class="d-flex flex-column flex-grow-1" style="height: 100%" outlined>
+        <v-card-title>
+            <span class="title">Pairs</span>
+            <v-spacer />
+            <v-tooltip bottom>
+                <template v-slot:activator="{ on }">
+                    <v-btn text v-on="on" color="primary" @click.stop="showDialog">Add asset</v-btn>
+                </template>
+                <span>Add new asset to the trade whitelist for 100 OTCu</span>
+            </v-tooltip>
+            <v-dialog v-model="dialog" max-width="30%" :transition="false">
+                <v-card>
+                    <v-card-title><span class="title">Add new asset</span></v-card-title>
+                    <v-card-text>
+                        Price: 100 OTCu
+                        <v-text-field
+                            v-model="asset"
+                            label="Asset ID"
+                            :rules="[v => !!v || 'Item is required', v => !(v in getAssets) || 'Asset in whitelist already']"
+                        ></v-text-field>
+                        <v-alert v-if="uTokenRefill(requiredAmount).showAlert" type="info" :icon="false" outlined>
+                            The price is 100 OTCu or WAVES
+                        </v-alert>
+                        <buyDEX v-if="uTokenRefill(requiredAmount).showBuyDex" :targetAmount="requiredAmount - balance" />
+                        <buyDApp v-if="uTokenRefill(requiredAmount).showBuyDApp" :targetAmount="requiredAmount - balance" />
+                    </v-card-text>
+                    <v-card-actions>
+                        <v-spacer />
+                        <v-btn text color="primary" @click="doAddAsset(asset)" :disabled="!getLogin">Add asset</v-btn>
+                        <v-btn text color="primary" @click="dialog = false">Close</v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
+        </v-card-title>
+        <v-card-text class="d-flex flex-column" style="overflow: auto">
+            <v-data-table
+            @click:row="selectPair"
+            class="d-flex flex-column"
+            style="width: 100%"
+            :headers="headers"
+            :items="getPairs"
+            :search="search"
+            :custom-filter="dataFilter"
+            :items-per-page="-1"
+            hide-default-footer
+            height="100%"
+            >
+            <template v-slot:top>
+                <v-text-field v-model="search" label="Search" prepend-inner-icon="mdi-magnify" clearable>
+                    <!-- <template v-slot:append>
+                        <v-tooltip bottom>
+                            <template v-slot:activator="{ on }">
+                                <v-icon v-on="on">mdi-help-circle-outline</v-icon>
+                            </template>
+                            I'm a tooltip
+                        </v-tooltip>
+                    </template> -->
+                </v-text-field>
+            </template>
+            <template v-slot:item.amountAssetName="{ item }">
+                <span>{{ item.amountAssetName + ' / ' + item.priceAssetName }}</span>
+            </template>
+        </v-data-table>
+    </v-card-text>
 </v-card>
 </template>
 
 <script>
-	export default {
-		data: () => ({
-			search: '',
-			headers: [
-				{ text: 'Pair', value: 'pair' },
-			],
-			pairs: [
-				{ pair: 'WAVES/BTC', assets: 'test' },
-				{ pair: 'WAVES/USD', assets: 'test1' },
-				{ pair: 'VST/WAVES', assets: 'test1' },
-				{ pair: 'VST/USD', assets: 'test2' },
-				{ pair: 'WAVES/ETH', assets: 'test2' },
-				{ pair: 'ETH/BTC', assets: 'test' },
-				{ pair: 'ETH/USD', assets: 'test' },
-				{ pair: 'ETH/USD', assets: 'test' },
-				{ pair: 'ETH/USD', assets: 'test' },
-				{ pair: 'ETH/USD', assets: 'test' },
-				{ pair: 'ETH/USD', assets: 'test' },
-				{ pair: 'ETH/USD', assets: 'test' },
-				{ pair: 'ETH/USD', assets: 'test' },
-				{ pair: 'ETH/USD', assets: 'test' },
-				{ pair: 'ETH/USD', assets: 'test' },
-			]
-		}),
-		methods: {
-			dataFilter: function (value, search, item) {
-				return value != null &&
-					search != null &&
-					typeof value === 'string' &&
-					(item.pair.indexOf(search) !== -1 || item.assets.indexOf(search) !== -1)
+    import { mapGetters, mapMutations, mapActions } from 'vuex';
+    import BuyDApp from '@/components/BuyDApp';
+    import BuyDEX from '@/components/BuyDEX';
+    import config from '@/config'
+
+    export default {
+        data: () => ({
+            requiredAmount: 100,
+            asset: '',
+            dialog: false,
+            search: '',
+            headers: [
+                { text: 'Pair', value: 'amountAssetName' },
+            ],
+        }),
+        components: {
+            BuyDApp,
+            BuyDEX,
+        },
+        computed: {
+            ...mapGetters(['getPairs', 'getCurrentPair', 'getAssets', 'getLogin', 'getBalance', 'uTokenRefill']),
+			balance() {
+				return this.getLogin && this.getBalance && this.getBalance[config.OTCu] ? +(this.getBalance[config.OTCu] / 10 ** 8).toFixed(8) : 0;
 			},
-		},
-	}
+        },
+        methods: {
+            ...mapMutations(['setCurrentPair']),
+            ...mapActions(['checkKeeper', 'fetchDexOrderbook', 'fetchDAppBalance', 'addAsset']),
+            showDialog() {
+                this.dialog = true;
+                this.fetchDexOrderbook();
+                this.fetchDAppBalance();
+            },
+            async doAddAsset(asset) {
+                await this.addAsset({ asset: this.asset, inWaves: this.uTokenRefill(this.requiredAmount).inWaves })
+            },
+            selectPair: function (item) {
+                this.setCurrentPair({
+                    amountAsset: item.amountAsset,
+                    amountAssetName: item.amountAssetName,
+                    priceAsset: item.priceAsset,
+                    priceAssetName: item.priceAssetName,
+                })
+            },
+            dataFilter: function (value, search, item) {
+                return value != null &&
+                search != null &&
+                typeof value === 'string' &&
+                (item.amountAssetName.toLowerCase().indexOf(search.toLowerCase()) !== -1
+                || item.priceAssetName.toLowerCase().indexOf(search.toLowerCase()) !== -1
+                || item.amountAsset.toLowerCase().indexOf(search.toLowerCase()) !== -1
+                || item.priceAsset.toLowerCase().indexOf(search.toLowerCase()) !== -1)
+            },
+        },
+    }
 </script>
