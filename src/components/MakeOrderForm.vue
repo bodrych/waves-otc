@@ -14,7 +14,7 @@
 					:item-text="(item) => item.id === 'WAVES' ? 'WAVES' : item.name + ': ' + item.id"
 					item-value="id"
 					label="Amount asset ID"
-					:rules="[v => !!v || 'Item is required', v => v in getAssets || 'Add asset to the tradable list']"
+					:rules="[v => !!v || 'Item is required', v => v in getAssets || 'Add asset to the tradable list', v => v !== priceAsset || 'Invalid asset']"
 				></v-autocomplete>
 				<!-- <v-text-field 
 					v-model="amountAsset"
@@ -27,7 +27,7 @@
 					:item-text="(item) => item.id === 'WAVES' ? 'WAVES' : item.name + ': ' + item.id"
 					item-value="id"
 					label="Price asset ID"
-					:rules="[v => !!v || 'Item is required', v => v in getAssets || 'Add asset to the tradable list']"
+					:rules="[v => !!v || 'Item is required', v => v in getAssets || 'Add asset to the tradable list', v => v !== amountAsset || 'Invalid asset']"
 				></v-autocomplete>
 				<!-- <v-text-field
 					v-model="priceAsset"
@@ -37,6 +37,7 @@
 				<v-text-field
 					v-model="amount"
 					label="Amount"
+					:hint="amountHint"
 					:rules="[v => !!v || 'Item is required', v => v > 0 && !isNaN(parseFloat(v)) || 'Invalid amount' ]"
 				></v-text-field>
 				<v-text-field
@@ -47,6 +48,7 @@
 				<v-text-field
 					v-model="priceAssetAmount"
 					label="Price asset amount"
+					:hint="priceAssetAmountHint"
 					:rules="[v => !!v || 'Item is required', v => v > 0 && !isNaN(parseFloat(v)) || 'Invalid price asset amount']"
 				></v-text-field>
 				{{ orderInfo }}
@@ -139,10 +141,26 @@
 				'getAssets',
 				'getAssetsArray',
 				'checkStatus',
+				'getBalance',
+				'getAssetBalanceFloat',
 			]),
 			orderInfo() {
 				return `${_.capitalize(this.orderType)} ${this.amount} ${this.getAssets[this.amountAsset].name} for ${this.priceAssetAmount} ${this.getAssets[this.priceAsset].name}`;
-			}
+			},
+			amountHint() {
+				if (this.orderType === 'sell') {
+					return 'Max: ' + this.getAssetBalanceFloat(this.amountAsset)
+				} else {
+					return ''
+				}
+			},
+			priceAssetAmountHint() {
+				if (this.orderType === 'buy') {
+					return 'Max: ' + this.getAssetBalanceFloat(this.priceAsset)
+				} else {
+					return ''
+				}
+			},
 		},
 		methods: {
 			...mapActions([

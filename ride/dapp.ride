@@ -118,23 +118,24 @@ func makeSell(priceAsset:String, priceAssetAmount:Int, all:Boolean, password:Str
                         case p:ByteVector => p.toBase58String()
                         case _ => "WAVES"
                     }
-                    let assets = this.getString("assets").valueOrErrorMessage("There are not available assets")
-                    if !assets.indexOf(priceAsset).isDefined() || !assets.indexOf(amountAsset).isDefined() then throw("Asset are not available for trading") else
-                            let address = i.caller.bytes.toBase58String()
-                            if !checkStatus(address) && (all || password != "") then throw("You must have pro status to use these features") else
-                                let orderId = "order_" + i.transactionId.toBase58String()
-                                # just check password format
-                                let passwordValid = password.fromBase58String()
-                                let data = "sell"
-                                    + "_" + payment.amount.toString()
-                                    + "_" + amountAsset
-                                    + "_" + priceAssetAmount.toString()
-                                    + "_" + priceAsset
-                                    + "_" + address # owner
-                                    + "_" + all.toString()
-                                    + "_" + password
-                                    + "_" + 0.toString() # spent
-                                WriteSet(DataEntry(orderId, data)::nil)
+                    if amountAsset == priceAsset then throw("Invalid pair") else
+                        let assets = this.getString("assets").valueOrErrorMessage("There are not available assets")
+                        if !assets.indexOf(priceAsset).isDefined() || !assets.indexOf(amountAsset).isDefined() then throw("Asset are not available for trading") else
+                                let address = i.caller.bytes.toBase58String()
+                                if !checkStatus(address) && (all || password != "") then throw("You must have pro status to use these features") else
+                                    let orderId = "order_" + i.transactionId.toBase58String()
+                                    # just check password format
+                                    let passwordValid = password.fromBase58String()
+                                    let data = "sell"
+                                        + "_" + payment.amount.toString()
+                                        + "_" + amountAsset
+                                        + "_" + priceAssetAmount.toString()
+                                        + "_" + priceAsset
+                                        + "_" + address # owner
+                                        + "_" + all.toString()
+                                        + "_" + password
+                                        + "_" + 0.toString() # spent
+                                    WriteSet(DataEntry(orderId, data)::nil)
 }
 
 @Callable(i)
@@ -149,22 +150,23 @@ func makeBuy(amountAsset:String, amount:Int, all:Boolean, password:String) = {
                         case p:ByteVector => p.toBase58String()
                         case _ => "WAVES"
                     }
-                    let assets = this.getString("assets").valueOrErrorMessage("There are not available assets")
-                    if !assets.indexOf(priceAsset).isDefined() || !assets.indexOf(amountAsset).isDefined() then throw("Asset are not available for trading") else
-                            let address = i.caller.bytes.toBase58String()
-                            if !checkStatus(address) && (all || password != "") then throw("You must have pro status to use these features") else
-                                let orderId = "order_" + i.transactionId.toBase58String()
-                                if amount == 0 then throw("invalid buy amount") else
-                                    let data = "buy"
-                                        + "_" + amount.toString()
-                                        + "_" + amountAsset
-                                        + "_" + priceAssetAmount.toString()
-                                        + "_" + priceAsset
-                                        + "_" + address
-                                        + "_" + all.toString()
-                                        + "_" + password
-                                        + "_" + 0.toString()
-                                    WriteSet(DataEntry(orderId, data)::nil)
+                    if amountAsset == priceAsset then throw("Invalid pair") else
+                        let assets = this.getString("assets").valueOrErrorMessage("There are not available assets")
+                        if !assets.indexOf(priceAsset).isDefined() || !assets.indexOf(amountAsset).isDefined() then throw("Asset are not available for trading") else
+                                let address = i.caller.bytes.toBase58String()
+                                if !checkStatus(address) && (all || password != "") then throw("You must have pro status to use these features") else
+                                    let orderId = "order_" + i.transactionId.toBase58String()
+                                    if amount == 0 then throw("invalid buy amount") else
+                                        let data = "buy"
+                                            + "_" + amount.toString()
+                                            + "_" + amountAsset
+                                            + "_" + priceAssetAmount.toString()
+                                            + "_" + priceAsset
+                                            + "_" + address
+                                            + "_" + all.toString()
+                                            + "_" + password
+                                            + "_" + 0.toString()
+                                        WriteSet(DataEntry(orderId, data)::nil)
 }
 
 @Callable(i)

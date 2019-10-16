@@ -77,7 +77,15 @@
 			},
 		},
 		computed: {
-			...mapGetters(['getCurrentPair', 'getAssets', 'checkStatus', 'getPublicKey', 'getTakeOrder', 'orderTakeDialogDisplay']),
+			...mapGetters([
+				'getCurrentPair',
+				'getAssets',
+				'checkStatus',
+				'getPublicKey',
+				'getTakeOrder',
+				'orderTakeDialogDisplay',
+				'getAssetBalanceFloat',
+			]),
 			dialogDisplay: {
 				get() {
 					return this.orderTakeDialogDisplay;

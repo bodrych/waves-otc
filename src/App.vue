@@ -12,7 +12,7 @@
         <span>OTC</span>
       </v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-btn href="https://github.com/" target="_blank" icon><v-icon>mdi-github-circle</v-icon></v-btn>
+      <v-btn href="https://github.com/bodrych/waves-otc" target="_blank" icon><v-icon>mdi-github-circle</v-icon></v-btn>
     </v-app-bar>
 
     <v-content id="content">

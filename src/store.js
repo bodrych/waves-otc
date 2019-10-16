@@ -30,7 +30,10 @@ export default new Vuex.Store({
       }
     },
     orders: [],
-    balance: null,
+    balance: {
+      '4LHHvYGNKJUg5hj65aGD5vgScvCBmLpdRFtjokvCjSL8': 0,
+      'WAVES': 0,
+    },
     dAppBalance: null,
     dexStatus: {},
     currentPair: {
@@ -205,6 +208,7 @@ export default new Vuex.Store({
     getAddress: state => state.publicState && state.publicState.account && state.publicState.account.address,
     getPublicKey: state => state.publicState && state.publicState.account && state.publicState.account.publicKey,
     getBalance: state => state.balance,
+    getAssetBalanceFloat: (state, getters) => assetId => getters.getLogin? +(getters.getBalance[assetId] / 10 ** getters.getAssets[assetId].decimals).toFixed(getters.getAssets[assetId].decimals) : 0,
     getOrders: (state, getters) => {
       return _.map(state.orders, item => {
         const parts = item.value.split('_');
