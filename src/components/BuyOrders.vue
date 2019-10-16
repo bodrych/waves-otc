@@ -14,7 +14,6 @@
 <script>
 	import OrdersTable from './OrdersTable'
 	import MakeOrderForm from './MakeOrderForm'
-	import { mapGetters } from 'vuex'
 
 	export default {
 		props: {

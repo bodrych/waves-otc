@@ -18,6 +18,14 @@
 				<p>{{ getAddress }}</p>
 				<p>Current status: {{ status }}</p>
 			</template>
+			<v-text-field 
+				v-model="getApiBase"
+				label="Data provider"
+				hint="You can change it in Waves Keeper settings"
+				persistent-hint
+				disabled
+			>
+			</v-text-field>
 		</v-card-text>
 		<v-dialog v-model="dialogDisplay" max-width="30%" :transition="false">
 			<v-card>
@@ -51,32 +59,44 @@
 
 <script>
 	import { mapGetters, mapActions } from 'vuex';
-	import config from '../config';
+	import config from '@/config';
     import BuyDApp from '@/components/BuyDApp';
-    import BuyDEX from '@/components/BuyDEX';
+	import BuyDEX from '@/components/BuyDEX';
 
 	export default {
-		data: () => ({
-			requiredAmount: 10,
-			targetStatus: false,
-			amount: 10,
-			address: '',
-			dialog: false,
-			dexDialog: false,
-			price: 100000000,
-			dexData: {},
-			dexAmount: 1,
-			dexTargetAmount: 1,
-			dexPrice: 1,
-			dexPriceAssetAmount: 1,
-			dexMaxBuyAmount: 1,
-		}),
+		data() {
+			return {
+				requiredAmount: 10,
+				targetStatus: false,
+				amount: 10,
+				address: '',
+				dialog: false,
+				dexDialog: false,
+				price: 1e8,
+				dexData: {},
+				dexAmount: 1,
+				dexTargetAmount: 1,
+				dexPrice: 1,
+				dexPriceAssetAmount: 1,
+				dexMaxBuyAmount: 1,
+			}
+		},
         components: {
             BuyDApp,
             BuyDEX,
         },
 		computed: {
-			...mapGetters(['getAddress', 'getLogin', 'getStatus', 'getDexStatus', 'getDAppBalance', 'uTokenRefill', 'getBalance', 'upgradeDialogDisplay']),
+			...mapGetters([
+				'getAddress',
+				'getLogin',
+				'getStatus',
+				'getDexStatus',
+				'getDAppBalance',
+				'uTokenRefill',
+				'getBalance',
+				'upgradeDialogDisplay',
+				'getApiBase',
+			]),
 			status() {
 				if (this.getStatus.unlimited) {
 					return 'PRO (unlimited)'
@@ -87,7 +107,7 @@
 				}
 			},
 			balance() {
-				return this.getLogin && this.getBalance && this.getBalance[config.OTCu] ? +(this.getBalance[config.OTCu] / 10 ** 8).toFixed(8) : 0;
+				return this.getLogin && this.getBalance && this.getBalance[config.OTCu] ? +(this.getBalance[config.OTCu] / 1e8).toFixed(8) : 0;
 			},
 			dialogDisplay: {
 				get() {
@@ -114,7 +134,7 @@
 				'fetchDexOrderbook',
 				'fetchDAppBalance',
 				'showUpgradeDialog',
-				'closeUpgradeDialog'
+				'closeUpgradeDialog',
 			]),
 			showDialog() {
 				this.dialog = true;

@@ -63,9 +63,9 @@
 				<v-text-field
 					v-if="passwordProtected"
 					append-icon="mdi-autorenew"
+					@click:append="password = generate()"
 					v-model="password"
 					label="Password"
-					@click:append="generate"
 				></v-text-field>
 				<v-btn v-if="!checkStatus" text color="primary" @click="showUpgradeDialog">Upgrade to PRO</v-btn>
 			</v-card-text>
@@ -127,14 +127,11 @@
 				}
 			},
 			checkStatus(value) {
-				if (!value)
+				if (!value) {
 					this.passwordProtected = false;
 					this.all = false;
+				}
 			},
-			// getAssetsArray(value) {
-			// 	if (!_.isEqual(this.assetsArray, value))
-			// 		this.assetsArray = value;
-			// }
 		},
 		computed: {
 			...mapGetters([

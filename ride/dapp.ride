@@ -3,6 +3,27 @@
 {-# SCRIPT_TYPE ACCOUNT #-}
 
 let uTokenId = base58'GHh7EMnVnUBCYNJMktuLPVr3P2oCqBCb4c87fBCZ5CzY'
+let admin = addressFromStringValue("3P96VpN2dBS1111111ydADa5a6AD1Un9iUv")
+
+let shutdownFlag = match this.getBoolean("shutdown_flag") {
+    case bool:Boolean => bool
+    case _:Unit => false
+}
+
+let shutdownMessage = match this.getString("shutdown_message") {
+    case str:String => str
+    case _:Unit => "Forbidden"
+}
+
+let reserve = match this.getInteger("reserve") {
+    case int:Int => int
+    case _:Unit => 0
+}
+
+let balance = match this.getInteger("balance") {
+    case int:Int => int
+    case _:Unit => 0
+}
 
 func checkStatus(address:String) = {
     let statusUnlimited = match this.getBoolean(address + "_unlimited") {
@@ -16,252 +37,216 @@ func checkStatus(address:String) = {
     statusUnlimited || statusTime > lastBlock.timestamp
 }
 
-# func checkDecimals(amountAsset:String, priceAsset:String) = {
-#     let amountAssetDecimals = if amountAsset == "WAVES" then 8 else amountAsset.fromBase58String().assetInfo().value().decimals
-#     let priceAssetDecimals = if priceAsset == "WAVES" then 8 else priceAsset.fromBase58String().assetInfo().value().decimals
-#     priceAssetDecimals >= amountAssetDecimals
-# }
-
 @Callable(i)
 func addAsset(assetId:String) = {
-    # payment = 100 OTCu or 100 WAVES
-    let addingPrice = 100 * 100000000
-    let addingPriceStr = "100"
-    let payment = i.payment.valueOrErrorMessage("Where is payment?")
-    if payment.assetId.isDefined() && payment.assetId != uTokenId then throw("OTCu or WAVES only") else
-        if payment.amount != addingPrice then throw("You have to pay " + addingPriceStr + " OTCu or WAVES") else
-            if !assetId.fromBase58String().assetInfo().isDefined() then throw("There is no asset with specified id") else
-                # assets whitelist
-                let assets = match this.getString("assets") {
-                    case str:String => str
-                    case _:Unit => ""
+    if shutdownFlag then throw(shutdownMessage) else
+        # payment = 100 OTCu or 100 WAVES
+        let addingPrice = 100 * 100000000
+        let addingPriceStr = "100"
+        let payment = i.payment.valueOrErrorMessage("Where is payment?")
+        if payment.assetId.isDefined() && payment.assetId != uTokenId then throw("OTCu or WAVES only") else
+            if payment.amount != addingPrice then throw("You have to pay " + addingPriceStr + " OTCu or WAVES") else
+                if !assetId.fromBase58String().assetInfo().isDefined() then throw("There is no asset with specified id") else
+                    # assets whitelist
+                    let assets = match this.getString("assets") {
+                        case str:String => str
+                        case _:Unit => ""
+                    }
+                    if assets.indexOf(assetId).isDefined() then throw("Asset is already available") else
+                        let list0 = DataEntry("assets", assets + assetId + ",")::nil
+                        let list1 = if payment.assetId == uTokenId then
+                            DataEntry("reserve", reserve + payment.amount)::list0
+                            else if !payment.assetId.isDefined() then
+                            DataEntry("balance", balance + payment.amount)::list0
+                            else list0
+                        WriteSet(list1)
+}
+
+@Callable(i)
+func pro() = {
+    if shutdownFlag then throw(shutdownMessage) else
+        let address = i.caller.bytes.toBase58String()
+        # payment = 10 OTCu or 10 WAVES for a month or 50 OTCu or 50 WAVES for unlimited
+        let unlimitedPrice = 50 * 100000000
+        let unlimitedPriceStr = "50"
+        let monthPrice = 10 * 100000000
+        let monthPriceStr = "10"
+        let payment = i.payment.valueOrErrorMessage("Where is payment?")
+        if payment.assetId.isDefined() && payment.assetId != uTokenId then throw("OTCu or WAVES only") else
+            if payment.amount != unlimitedPrice && payment.amount != monthPrice then throw("Invalid payment") else
+            let unlimited = payment.amount == unlimitedPrice
+                let currentUnlimited = match this.getBoolean(address + "_unlimited") {
+                    case bool:Boolean => bool
+                    case _:Unit => false
                 }
-                if assets.indexOf(assetId).isDefined() then throw("Asset is already available") else
-                    let list0 = DataEntry("assets", assets + assetId + ",")::nil
+                let currentTime = match this.getInteger(address + "_time") {
+                    case int:Int => int
+                    case _:Unit => lastBlock.timestamp
+                }
+                if currentUnlimited then throw("You have unlimited PRO status already. What do you want?") else
+                    # 1 month avg equal to 30.44 days = 2629743 seconds
+                    let month = 2629743000
+                    let list0 = DataEntry(address + "_unlimited", unlimited)::DataEntry(address + "_time", if unlimited then 0 else currentTime + month)::nil
                     let list1 = if payment.assetId == uTokenId then
-                        let reserve = match this.getInteger("reserve") {
-                            case int:Int => int
-                            case _:Unit => 0
-                        }
                         DataEntry("reserve", reserve + payment.amount)::list0
+                        else if !payment.assetId.isDefined() then
+                        DataEntry("balance", balance + payment.amount)::list0
                         else list0
                     WriteSet(list1)
 }
 
 @Callable(i)
-func pro() = {
-    let address = i.caller.bytes.toBase58String()
-    # payment = 10 OTCu or 10 WAVES for a month or 50 OTCu or 50 WAVES for unlimited
-    let unlimitedPrice = 50 * 100000000
-    let unlimitedPriceStr = "50"
-    let monthPrice = 10 * 100000000
-    let monthPriceStr = "10"
-    let payment = i.payment.valueOrErrorMessage("Where is payment?")
-    if payment.assetId.isDefined() && payment.assetId != uTokenId then throw("OTCu or WAVES only") else
-        if payment.amount != unlimitedPrice && payment.amount != monthPrice then throw("Invalid payment") else
-        let unlimited = payment.amount == unlimitedPrice
-            let currentUnlimited = match this.getBoolean(address + "_unlimited") {
-                case bool:Boolean => bool
-                case _:Unit => false
-            }
-            let currentTime = match this.getInteger(address + "_time") {
-                case int:Int => int
-                case _:Unit => lastBlock.timestamp
-            }
-            if currentUnlimited then throw("You have unlimited PRO status already. What do you want?") else
-                # 1 month avg equal to 30.44 days = 2629743 seconds
-                let month = 2629743000
-                let list0 = DataEntry(address + "_unlimited", unlimited)::DataEntry(address + "_time", if unlimited then 0 else currentTime + month)::nil
-                let list1 = if payment.assetId == uTokenId then
-                    let reserve = match this.getInteger("reserve") {
-                        case int:Int => int
-                        case _:Unit => 0
-                    }
-                    DataEntry("reserve", reserve + payment.amount)::list0
-                    else list0
-                WriteSet(list1)
-}
-
-@Callable(i)
 func buyUtilityToken() = {
-    let payment = i.payment.valueOrErrorMessage("Where is payment?")
-    if payment.assetId.isDefined() then throw("WAVES only") else
-        let reserve = match this.getInteger("reserve") {
-            case int:Int => int
-            case _:Unit => 0
-        }
-        if payment.amount > reserve then throw("Not enougth asset in dApp") else
-            ScriptResult(
-                WriteSet(DataEntry("reserve", reserve - payment.amount)::nil),
-                TransferSet(ScriptTransfer(i.caller, payment.amount, uTokenId)::nil)
-            )
+    if shutdownFlag then throw(shutdownMessage) else
+        let payment = i.payment.valueOrErrorMessage("Where is payment?")
+        if payment.assetId.isDefined() then throw("WAVES only") else
+            if payment.amount > reserve then throw("Not enougth asset in dApp") else
+                ScriptResult(
+                    WriteSet(DataEntry("reserve", reserve - payment.amount)::DataEntry("balance", balance + payment.amount)::nil),
+                    TransferSet(ScriptTransfer(i.caller, payment.amount, uTokenId)::nil)
+                )
 }
 
 @Callable(i)
 func makeSell(priceAsset:String, priceAssetAmount:Int, all:Boolean, password:String) = {
-    if priceAsset != "WAVES" && !priceAsset.fromBase58String().assetInfo().isDefined() then throw("There is no asset with specified id") else
-        if priceAssetAmount <= 0 then throw("Amount of price asset must be positive") else
-            let payment = i.payment.valueOrErrorMessage("Where is payment?")
-            if payment.amount <= 0 then throw("Amount must be positive") else
-                let amountAsset = match payment.assetId {
-                    case p:ByteVector => p.toBase58String()
-                    case _ => "WAVES"
-                }
-                let assets = this.getString("assets").valueOrErrorMessage("There are not available assets")
-                if !assets.indexOf(priceAsset).isDefined() || !assets.indexOf(amountAsset).isDefined() then throw("Asset are not available for trading") else
-                    # if !checkDecimals(amountAsset, priceAsset) then throw("Price asset decimals must be greater than or equal to amount asset decimals") else
-                        let address = i.caller.bytes.toBase58String()
-                        if !checkStatus(address) && (all || password != "") then throw("You must have pro status to use these features") else
-                            let orderId = i.transactionId.toBase58String()
-                            let orders = match this.getString("orders") {
-                                case s:String => s
-                                case _:Unit => ""
-                            }
-                            # just check password format
-                            let passwordValid = password.fromBase58String()
-                            let data = "sell"
-                                + "_" + payment.amount.toString()
-                                + "_" + amountAsset
-                                + "_" + priceAssetAmount.toString()
-                                + "_" + priceAsset
-                                + "_" + address # owner
-                                + "_" + all.toString()
-                                + "_" + password
-                                + "_" + 0.toString() # spent
-                            WriteSet(DataEntry("orders", orders + orderId + ",")::DataEntry(orderId, data)::nil)
+    if shutdownFlag then throw(shutdownMessage) else
+        if priceAsset != "WAVES" && !priceAsset.fromBase58String().assetInfo().isDefined() then throw("There is no asset with specified id") else
+            if priceAssetAmount <= 0 then throw("Amount of price asset must be positive") else
+                let payment = i.payment.valueOrErrorMessage("Where is payment?")
+                if payment.amount <= 0 then throw("Amount must be positive") else
+                    let amountAsset = match payment.assetId {
+                        case p:ByteVector => p.toBase58String()
+                        case _ => "WAVES"
+                    }
+                    let assets = this.getString("assets").valueOrErrorMessage("There are not available assets")
+                    if !assets.indexOf(priceAsset).isDefined() || !assets.indexOf(amountAsset).isDefined() then throw("Asset are not available for trading") else
+                            let address = i.caller.bytes.toBase58String()
+                            if !checkStatus(address) && (all || password != "") then throw("You must have pro status to use these features") else
+                                let orderId = "order_" + i.transactionId.toBase58String()
+                                # just check password format
+                                let passwordValid = password.fromBase58String()
+                                let data = "sell"
+                                    + "_" + payment.amount.toString()
+                                    + "_" + amountAsset
+                                    + "_" + priceAssetAmount.toString()
+                                    + "_" + priceAsset
+                                    + "_" + address # owner
+                                    + "_" + all.toString()
+                                    + "_" + password
+                                    + "_" + 0.toString() # spent
+                                WriteSet(DataEntry(orderId, data)::nil)
 }
 
 @Callable(i)
 func makeBuy(amountAsset:String, amount:Int, all:Boolean, password:String) = {
-    if amountAsset != "WAVES" && !amountAsset.fromBase58String().assetInfo().isDefined() then throw("There is no asset with specified id") else
-        if amount <= 0 then throw("Amount must be positive") else
-            let payment = i.payment.valueOrErrorMessage("where is payment?")
-            let priceAssetAmount = payment.amount
-            if priceAssetAmount <= 0 then throw("amount must be positive") else
-                let priceAsset = match payment.assetId {
-                    case p:ByteVector => p.toBase58String()
-                    case _ => "WAVES"
-                }
-                let assets = this.getString("assets").valueOrErrorMessage("There are not available assets")
-                if !assets.indexOf(priceAsset).isDefined() || !assets.indexOf(amountAsset).isDefined() then throw("Asset are not available for trading") else
-                    # if !checkDecimals(amountAsset, priceAsset) then throw("Price asset decimals must be greater than or equal to amount asset decimals") else
-                        let address = i.caller.bytes.toBase58String()
-                        if !checkStatus(address) && (all || password != "") then throw("You must have pro status to use these features") else
-                            let orderId = i.transactionId.toBase58String()
-                            let orders = match this.getString("orders") {
-                                case s:String => s
-                                case _:Unit => ""
-                            }
-                            # let amountAssetDecimals = if amountAsset == "WAVES" then 8 else amountAsset.fromBase58String().assetInfo().value().decimals
-                            # let amount = priceAssetAmount * pow(10, 0, 8, 0, 0, CEILING) / price
-                            if amount == 0 then throw("invalid buy amount") else
-                                let data = "buy"
-                                    + "_" + amount.toString()
-                                    + "_" + amountAsset
-                                    + "_" + priceAssetAmount.toString()
-                                    + "_" + priceAsset
-                                    + "_" + address
-                                    + "_" + all.toString()
-                                    + "_" + password
-                                    + "_" + 0.toString()
-                                WriteSet(DataEntry("orders", orders + orderId + ",")::DataEntry(orderId, data)::nil)
+    if shutdownFlag then throw(shutdownMessage) else
+        if amountAsset != "WAVES" && !amountAsset.fromBase58String().assetInfo().isDefined() then throw("There is no asset with specified id") else
+            if amount <= 0 then throw("Amount must be positive") else
+                let payment = i.payment.valueOrErrorMessage("where is payment?")
+                let priceAssetAmount = payment.amount
+                if priceAssetAmount <= 0 then throw("amount must be positive") else
+                    let priceAsset = match payment.assetId {
+                        case p:ByteVector => p.toBase58String()
+                        case _ => "WAVES"
+                    }
+                    let assets = this.getString("assets").valueOrErrorMessage("There are not available assets")
+                    if !assets.indexOf(priceAsset).isDefined() || !assets.indexOf(amountAsset).isDefined() then throw("Asset are not available for trading") else
+                            let address = i.caller.bytes.toBase58String()
+                            if !checkStatus(address) && (all || password != "") then throw("You must have pro status to use these features") else
+                                let orderId = "order_" + i.transactionId.toBase58String()
+                                if amount == 0 then throw("invalid buy amount") else
+                                    let data = "buy"
+                                        + "_" + amount.toString()
+                                        + "_" + amountAsset
+                                        + "_" + priceAssetAmount.toString()
+                                        + "_" + priceAsset
+                                        + "_" + address
+                                        + "_" + all.toString()
+                                        + "_" + password
+                                        + "_" + 0.toString()
+                                    WriteSet(DataEntry(orderId, data)::nil)
 }
 
 @Callable(i)
 func takeSell(orderId:String, sig:String) = {
-    let payment = i.payment.valueOrErrorMessage("Where is payment?")
-    let priceAssetAmount = payment.amount
-    if priceAssetAmount <= 0 then throw("Amount must be positive") else
-        let priceAsset = match payment.assetId {
-            case p:ByteVector => p.toBase58String()
-            case _ => "WAVES"
-        }
-        let data = this.getString(orderId).valueOrErrorMessage("Invalid order id")
+    if shutdownFlag then throw(shutdownMessage) else
+        let payment = i.payment.valueOrErrorMessage("Where is payment?")
+        let priceAssetAmount = payment.amount
+        if priceAssetAmount <= 0 then throw("Amount must be positive") else
+            let priceAsset = match payment.assetId {
+                case p:ByteVector => p.toBase58String()
+                case _ => "WAVES"
+            }
+            let data = this.getString(orderId).valueOrErrorMessage("Invalid order id")
 
-        let parts = data.split("_")
+            let parts = data.split("_")
 
-        let orderType = parts[0]
-        let orderAmount = parts[1].parseIntValue()
-        let orderAmountAsset = parts[2]
-        let orderPriceAssetAmount = parts[3].parseIntValue()
-        let orderPriceAsset = parts[4]
-        let orderOwner = parts[5].addressFromString().value()
-        let orderAll = if parts[6] == "true" then true else false
-        let orderPassword = parts[7]
-        let orderSpent = parts[8].parseIntValue()
+            let orderType = parts[0]
+            let orderAmount = parts[1].parseIntValue()
+            let orderAmountAsset = parts[2]
+            let orderPriceAssetAmount = parts[3].parseIntValue()
+            let orderPriceAsset = parts[4]
+            let orderOwner = parts[5].addressFromString().value()
+            let orderAll = if parts[6] == "true" then true else false
+            let orderPassword = parts[7]
+            let orderSpent = parts[8].parseIntValue()
 
-        if orderType != "sell" then throw("Invalid order type") else
-            if orderPriceAsset != priceAsset then throw("Payment asset must be " + orderPriceAsset) else
-                let valid = if orderPassword != "" then sigVerify(i.callerPublicKey, sig.fromBase58String(), orderPassword.fromBase58String()) else true
-                if !valid then throw("The order is private") else
-                    # let priceAssetDecimals = if orderPriceAsset == "WAVES" then 8 else orderPriceAsset.fromBase58String().assetInfo().value().decimals
-                    # let amountAssetDecimals = if orderAmountAsset == "WAVES" then 8 else orderAmountAsset.fromBase58String().assetInfo().value().decimals
-                    # let amount = priceAssetAmount * pow(10, 0, 8, 0, 0, CEILING) / orderPrice
-                    let amount = priceAssetAmount * orderAmount / orderPriceAssetAmount
-                    if amount == 0 then throw("Invalid amount") else
-                        if orderAll && (amount < orderAmount) then throw("You must take all or none") else
-                            if amount > orderAmount - orderSpent then throw("Not enougth asset in order") else
-                                let orders = match this.getString("orders") {
-                                    case s:String => s
-                                    case _:Unit => ""
-                                }
-                                let newData = data.dropRight(parts[8].size()) + (orderSpent + amount).toString()
-                                let index = orders.indexOf(orderId).value()
-                                let newOrders = if orderAmount == amount + orderSpent then orders.take(index) + orders.drop(index + orderId.size() + 1) else orders
-                                let toCaller = ScriptTransfer(i.caller, amount, if orderAmountAsset == "WAVES" then unit else orderAmountAsset.fromBase58String())
-                                let toOwner = ScriptTransfer(orderOwner, priceAssetAmount, if orderPriceAsset == "WAVES" then unit else orderPriceAsset.fromBase58String())
-                                ScriptResult(
-                                    WriteSet(DataEntry("orders", newOrders)::DataEntry(orderId, newData)::nil),
-                                    TransferSet(toCaller::toOwner::nil)
-                                )
+            if orderType != "sell" then throw("Invalid order type") else
+                if orderPriceAsset != priceAsset then throw("Payment asset must be " + orderPriceAsset) else
+                    let valid = if orderPassword != "" then sigVerify(i.callerPublicKey, sig.fromBase58String(), orderPassword.fromBase58String()) else true
+                    if !valid then throw("The order is private") else
+                        let amount = priceAssetAmount * orderAmount / orderPriceAssetAmount
+                        if amount == 0 then throw("Invalid amount") else
+                            if orderAll && (amount < orderAmount) then throw("You must take all or none") else
+                                if amount > orderAmount - orderSpent then throw("Not enougth asset in order") else
+                                    let newData = data.dropRight(parts[8].size()) + (orderSpent + amount).toString()
+                                    let toCaller = ScriptTransfer(i.caller, amount, if orderAmountAsset == "WAVES" then unit else orderAmountAsset.fromBase58String())
+                                    let toOwner = ScriptTransfer(orderOwner, priceAssetAmount, if orderPriceAsset == "WAVES" then unit else orderPriceAsset.fromBase58String())
+                                    ScriptResult(
+                                        WriteSet(DataEntry(orderId, newData)::nil),
+                                        TransferSet(toCaller::toOwner::nil)
+                                    )
 }
 
 @Callable(i)
 func takeBuy(orderId:String, sig:String) = {
-    let payment = i.payment.valueOrErrorMessage("where is payment?")
-    let amount = payment.amount
-    if amount <= 0 then throw("amount must be positive") else
-        let amountAsset = match payment.assetId {
-            case p:ByteVector => p.toBase58String()
-            case _ => "WAVES"
-        }
-        let data = this.getString(orderId).valueOrErrorMessage("Invalid order id")
+    if shutdownFlag then throw(shutdownMessage) else
+        let payment = i.payment.valueOrErrorMessage("where is payment?")
+        let amount = payment.amount
+        if amount <= 0 then throw("amount must be positive") else
+            let amountAsset = match payment.assetId {
+                case p:ByteVector => p.toBase58String()
+                case _ => "WAVES"
+            }
+            let data = this.getString(orderId).valueOrErrorMessage("Invalid order id")
 
-        let parts = data.split("_")
+            let parts = data.split("_")
 
-        let orderType = parts[0]
-        let orderAmount = parts[1].parseIntValue()
-        let orderAmountAsset = parts[2]
-        let orderPriceAssetAmount = parts[3].parseIntValue()
-        let orderPriceAsset = parts[4]
-        let orderOwner = parts[5].addressFromString().value()
-        let orderAll = if parts[6] == "true" then true else false
-        let orderPassword = parts[7]
-        let orderSpent = parts[8].parseIntValue()
+            let orderType = parts[0]
+            let orderAmount = parts[1].parseIntValue()
+            let orderAmountAsset = parts[2]
+            let orderPriceAssetAmount = parts[3].parseIntValue()
+            let orderPriceAsset = parts[4]
+            let orderOwner = parts[5].addressFromString().value()
+            let orderAll = if parts[6] == "true" then true else false
+            let orderPassword = parts[7]
+            let orderSpent = parts[8].parseIntValue()
 
-        if orderType != "buy" then throw("Invalid order type") else
-            if orderAmountAsset != amountAsset then throw("payment asset must be " + orderAmountAsset) else
-                let valid = if orderPassword != "" then sigVerify(i.callerPublicKey, sig.fromBase58String(), orderPassword.fromBase58String()) else true
-                if !valid then throw("The order is private") else
-                    # let amountAssetDecimals = if orderAmountAsset == "WAVES" then 8 else orderAmountAsset.fromBase58String().assetInfo().value().decimals
-                    # let priceAssetAmount = amount * orderPrice / pow(10, 0, 8, 0, 0, CEILING)
-                    let priceAssetAmount = amount * orderPriceAssetAmount / orderAmount
-                    if priceAssetAmount == 0 then throw("Invalid amount") else
-                        if orderAll && (priceAssetAmount < orderPriceAssetAmount) then throw("You must take all or none") else
-                            if priceAssetAmount > orderPriceAssetAmount - orderSpent then throw("not enougth asset in order") else
-                                let orders = match this.getString("orders") {
-                                    case s:String => s
-                                    case _:Unit => ""
-                                }
-                                let newData = data.dropRight(parts[8].size()) + (orderSpent + priceAssetAmount).toString()
-                                let index = orders.indexOf(orderId).value()
-                                let newOrders = if orderPriceAssetAmount == priceAssetAmount + orderSpent then orders.take(index) + orders.drop(index + orderId.size() + 1) else orders
-                                let toCaller = ScriptTransfer(i.caller, priceAssetAmount, if orderPriceAsset == "WAVES" then unit else orderPriceAsset.fromBase58String())
-                                let toOwner = ScriptTransfer(orderOwner, amount, if orderAmountAsset == "WAVES" then unit else orderAmountAsset.fromBase58String())
-                                ScriptResult(
-                                    WriteSet(DataEntry("orders", newOrders)::DataEntry(orderId, newData)::nil),
-                                    TransferSet(toCaller::toOwner::nil)
-                                )
+            if orderType != "buy" then throw("Invalid order type") else
+                if orderAmountAsset != amountAsset then throw("payment asset must be " + orderAmountAsset) else
+                    let valid = if orderPassword != "" then sigVerify(i.callerPublicKey, sig.fromBase58String(), orderPassword.fromBase58String()) else true
+                    if !valid then throw("The order is private") else
+                        let priceAssetAmount = amount * orderPriceAssetAmount / orderAmount
+                        if priceAssetAmount == 0 then throw("Invalid amount") else
+                            if orderAll && (priceAssetAmount < orderPriceAssetAmount) then throw("You must take all or none") else
+                                if priceAssetAmount > orderPriceAssetAmount - orderSpent then throw("not enougth asset in order") else
+                                    let newData = data.dropRight(parts[8].size()) + (orderSpent + priceAssetAmount).toString()
+                                    let toCaller = ScriptTransfer(i.caller, priceAssetAmount, if orderPriceAsset == "WAVES" then unit else orderPriceAsset.fromBase58String())
+                                    let toOwner = ScriptTransfer(orderOwner, amount, if orderAmountAsset == "WAVES" then unit else orderAmountAsset.fromBase58String())
+                                    ScriptResult(
+                                        WriteSet(DataEntry(orderId, newData)::nil),
+                                        TransferSet(toCaller::toOwner::nil)
+                                    )
 }
 
 @Callable(i)
@@ -281,19 +266,13 @@ func returnSell(orderId:String) = {
     let orderSpent = parts[8].parseIntValue()
 
     if orderType != "sell" then throw("Invalid order type") else
-        if orderOwner != i.caller then throw("return should be called by order owner") else
+        if (orderOwner != i.caller) && !shutdownFlag then throw("return should be called by order owner") else
             let returnAmount = orderAmount - orderSpent
             if returnAmount <= 0 then throw("nothing to return") else
-                let orders = match this.getString("orders") {
-                    case s:String => s
-                    case _:Unit => ""
-                }
                 let newData = data.dropRight(parts[8].size()) + (orderAmount).toString()
-                let index = orders.indexOf(orderId).value()
-                let newOrders = orders.take(index) + orders.drop(index + orderId.size() + 1)
                 ScriptResult(
-                    WriteSet(DataEntry("orders", newOrders)::DataEntry(orderId, newData)::nil),
-                    TransferSet(ScriptTransfer(i.caller, returnAmount, if orderAmountAsset == "WAVES" then unit else orderAmountAsset.fromBase58String())::nil)
+                    WriteSet(DataEntry(orderId, newData)::nil),
+                    TransferSet(ScriptTransfer(orderOwner, returnAmount, if orderAmountAsset == "WAVES" then unit else orderAmountAsset.fromBase58String())::nil)
                 )
 }
 
@@ -314,20 +293,44 @@ func returnBuy(orderId:String) = {
     let orderSpent = parts[8].parseIntValue()
 
     if orderType != "buy" then throw("Invalid order type") else
-        if orderOwner != i.caller then throw("Return should be called by order owner") else
-            # let amountAssetDecimals = if amountAsset == "WAVES" then 8 else amountAsset.fromBase58String().assetInfo().value().decimals
-            # let returnAmount = (amount - spent) * price / pow(10, 0, 8, 0, 0, CEILING)
+        if (orderOwner != i.caller) && !shutdownFlag then throw("Return should be called by order owner") else
             let returnAmount = orderPriceAssetAmount - orderSpent
             if returnAmount <= 0 then throw("nothing to return") else
-                let orders = match this.getString("orders") {
-                    case s:String => s
-                    case _:Unit => ""
-                }
                 let newData = data.dropRight(parts[8].size()) + (orderPriceAssetAmount).toString()
-                let index = orders.indexOf(orderId).value()
-                let newOrders = orders.take(index) + orders.drop(index + orderId.size() + 1)
                 ScriptResult(
-                    WriteSet(DataEntry("orders", newOrders)::DataEntry(orderId, newData)::nil),
-                    TransferSet(ScriptTransfer(i.caller, returnAmount, if orderPriceAsset == "WAVES" then unit else orderPriceAsset.fromBase58String())::nil)
+                    WriteSet(DataEntry(orderId, newData)::nil),
+                    TransferSet(ScriptTransfer(orderOwner, returnAmount, if orderPriceAsset == "WAVES" then unit else orderPriceAsset.fromBase58String())::nil)
                 )
+}
+
+@Callable(i)
+func withdraw(mode:String) = {
+    # balance - free WAVES
+    # reserve - free OTCu
+    if i.caller != admin then throw("You should be an admin") else
+        if mode != "balance" && mode != "reserve" && mode != "all" then throw("Specify the mode: balance, reserve or all") else
+            let balanceEntry = DataEntry("balance", 0)
+            let balanceTransfer = ScriptTransfer(admin, balance, unit)
+            let reserveEntry = DataEntry("reserve", 0)
+            let reserveTransfer = ScriptTransfer(admin, reserve, unit)
+            let writeSet =
+                if mode == "balance" then balanceEntry::nil
+                else if mode == "reserve" then reserveEntry::nil
+                else if mode == "all" then balanceEntry::reserveEntry::nil
+                else nil
+            let transferSet =
+                if mode == "balance" then balanceTransfer::nil
+                else if mode == "reserve" then reserveTransfer::nil
+                else if mode == "all" then balanceTransfer::reserveTransfer::nil
+                else nil
+            ScriptResult(
+                WriteSet(writeSet),
+                TransferSet(transferSet)
+            )
+}
+
+@Callable(i)
+func doShutdown(msg: String) = {
+    if i.caller != admin then throw("You should be an admin") else
+        WriteSet(DataEntry("shutdown_flag", true)::DataEntry("shutdown_message", msg)::nil)
 }

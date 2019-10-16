@@ -9,7 +9,7 @@ Vue.use(Vuex)
 
 // const persist = new VuexPersistence({
 //   reducer: (state) => ({
-//     publicState: state.publicState,
+//     appiBase: state.apiBase,
 //   }),
 // })
 
@@ -123,26 +123,30 @@ export default new Vuex.Store({
       return API.buyUtilityTokenDApp(amount);
     },
 
+    setCurrentPair({ commit }, pair) {
+      commit('setCurrentPair', pair)
+    },
+
     async fetchBalance({ commit, getters }) {
       if (getters.getAddress) {
-        const res = await API.fetchBalance(getters.getAddress);
+        const res = await API.fetchBalance(getters.getAddress, getters.getApiBase);
         commit('updateBalance', res);
       }
     },
 
-    async fetchDAppBalance({ commit }) {
-      const res = await API.fetchDAppBalance();
+    async fetchDAppBalance({ commit, getters }) {
+      const res = await API.fetchDAppBalance(getters.getApiBase);
       commit('updateDAppBalance', res);
     },
 
-    async fetchAvailableAssetsDetails({ commit }) {
-      const assetsDetails = await API.fetchAvailableAssetsDetails();
+    async fetchAvailableAssetsDetails({ commit, getters }) {
+      const assetsDetails = await API.fetchAvailableAssetsDetails(getters.getApiBase);
       commit('updateAssets', assetsDetails);
     },
 
-    async fetchOrders({ commit, dispatch }) {
+    async fetchOrders({ commit, dispatch, getters }) {
       await dispatch('fetchAvailableAssetsDetails');
-      const orders = await API.fetchOrders();
+      const orders = await API.fetchOrders(getters.getApiBase);
       commit('updateOrders', orders);
     },
 
@@ -151,7 +155,7 @@ export default new Vuex.Store({
     },
 
     async fetchAddressStatus({ commit, getters }) {
-      const status = await API.fetchAddressStatus(getters.getAddress);
+      const status = await API.fetchAddressStatus(getters.getAddress, getters.getApiBase);
       if (status) commit('updateStatus', status);
     },
 
@@ -197,6 +201,7 @@ export default new Vuex.Store({
     },
   },
   getters: {
+    getApiBase: state => state.publicState && state.publicState.network && state.publicState.network.server || config.apiBase,
     getAddress: state => state.publicState && state.publicState.account && state.publicState.account.address,
     getPublicKey: state => state.publicState && state.publicState.account && state.publicState.account.publicKey,
     getBalance: state => state.balance,
@@ -232,15 +237,18 @@ export default new Vuex.Store({
           owner, all, password, spent, price, priceFmt, };
         });
       },
+      getOpenOrders: (state, getters) => {
+        return _.filter(getters.getOrders, item => item.amount !== 0)
+      },
       getCurrentPair: state => state.currentPair,
       getPairs: (state, getters) => _.uniqBy(getters.getOrders, item => item.amountAsset + item.priceAsset),
       getSellOrders: (state, getters) => {
-        return _.filter(getters.getOrders, order => {
+        return _.filter(getters.getOpenOrders, order => {
           return order.type === 'sell' && order.amountAsset === state.currentPair.amountAsset && order.priceAsset === state.currentPair.priceAsset
         });
       },
       getBuyOrders: (state, getters) => {
-        return _.filter(getters.getOrders, order => {
+        return _.filter(getters.getOpenOrders, order => {
           return order.type === 'buy' && order.amountAsset === state.currentPair.amountAsset && order.priceAsset === state.currentPair.priceAsset
         });
       },

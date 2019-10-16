@@ -27,7 +27,7 @@
                     </v-card-text>
                     <v-card-actions>
                         <v-spacer />
-                        <v-btn text color="primary" @click="doAddAsset(asset)" :disabled="!getLogin">Add asset</v-btn>
+                        <v-btn text color="primary" @click="doAddAsset()" :disabled="!getLogin">Add asset</v-btn>
                         <v-btn text color="primary" @click="dialog = false">Close</v-btn>
                     </v-card-actions>
                 </v-card>
@@ -67,7 +67,7 @@
 </template>
 
 <script>
-    import { mapGetters, mapMutations, mapActions } from 'vuex';
+    import { mapGetters, mapActions } from 'vuex';
     import BuyDApp from '@/components/BuyDApp';
     import BuyDEX from '@/components/BuyDEX';
     import config from '@/config'
@@ -93,14 +93,13 @@
 			},
         },
         methods: {
-            ...mapMutations(['setCurrentPair']),
-            ...mapActions(['checkKeeper', 'fetchDexOrderbook', 'fetchDAppBalance', 'addAsset']),
+            ...mapActions(['checkKeeper', 'fetchDexOrderbook', 'fetchDAppBalance', 'addAsset', 'setCurrentPair']),
             showDialog() {
                 this.dialog = true;
                 this.fetchDexOrderbook();
                 this.fetchDAppBalance();
             },
-            async doAddAsset(asset) {
+            async doAddAsset() {
                 await this.addAsset({ asset: this.asset, inWaves: this.uTokenRefill(this.requiredAmount).inWaves })
             },
             selectPair: function (item) {

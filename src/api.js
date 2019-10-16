@@ -3,20 +3,18 @@ import config from './config';
 import _ from 'lodash';
 import { nodeInteraction } from '@waves/waves-transactions';
 
-const apiBase = config.apiBase;
-
 // const mapKV = (list) => {
 //   const kv = {};
 //   _.forEach(list, item => kv[item.key] = item);
 //   return kv;
 // };
 
-const fetchAccountDataByKey = async (address, matches) => {
-  const data = await axios.get(`${apiBase}/addresses/data/${address}${matches ? '?matches=' + matches : ''}`)
+const fetchAccountData = async (address, matches, apiBase) => {
+  const data = await axios.get(`${apiBase}addresses/data/${address}${matches ? '?matches=' + matches : ''}`)
   return data.data
 }
 
-export const fetchAddressStatus = async (address) => {
+export const fetchAddressStatus = async (address, apiBase) => {
   try {
     const unlimitedData = await nodeInteraction.accountDataByKey(address + '_unlimited', config.dApp, apiBase);
     const deadlineData = await nodeInteraction.accountDataByKey(address + '_time', config.dApp, apiBase);
@@ -28,31 +26,24 @@ export const fetchAddressStatus = async (address) => {
   }
 }
 
-const fetchAssetDetails = async (assetId) => {
-  const data = await axios.get(`${apiBase}/assets/details/${assetId}`)
+const fetchAssetDetails = async (assetId, apiBase) => {
+  const data = await axios.get(`${apiBase}assets/details/${assetId}`)
   return data.data
 }
 
-const fetchAvailableAssets = async () => {
+const fetchAvailableAssets = async (apiBase) => {
   const data = await nodeInteraction.accountDataByKey('assets', config.dApp, apiBase);
   const assets = data.value.split(',');
   assets.splice(-1, 1);
   return assets;
 }
 
-const fetchOpenOrders = async () => {
-  const openOrdersData = await nodeInteraction.accountDataByKey('orders', config.dApp, apiBase);
-  const openOrders = openOrdersData.value.split(',');
-  openOrders.splice(-1, 1);
-  return openOrders;
-}
-
-export const fetchAvailableAssetsDetails = async () => {
+export const fetchAvailableAssetsDetails = async (apiBase) => {
   const availableAssets = {};
-  const assets = await fetchAvailableAssets();
+  const assets = await fetchAvailableAssets(apiBase);
   const promises = assets.map(async item => {
     if (item !== 'WAVES') {
-      const details = await fetchAssetDetails(item);
+      const details = await fetchAssetDetails(item, apiBase);
       availableAssets[item] = { id: item, name: details.name, decimals: details.decimals };
     } else {
       availableAssets[item] = { id: item, name: item, decimals: 8 };
@@ -62,28 +53,27 @@ export const fetchAvailableAssetsDetails = async () => {
   return availableAssets;
 }
 
-export const fetchBalance = async (address) => {
+export const fetchBalance = async (address, apiBase) => {
   const balances = {};
-  const data = await axios.get(`${apiBase}/assets/balance/${address}`);
+  const data = await axios.get(`${apiBase}assets/balance/${address}`);
   _.forEach(data && data.data && data.data.balances, asset => {
     balances[asset.assetId] = asset.balance;
   });
-  const waves = await axios.get(`${apiBase}/addresses/balance/details/${address}`);
+  const waves = await axios.get(`${apiBase}addresses/balance/details/${address}`);
   if (waves && waves.data && waves.data.regular) {
     balances['WAVES'] = waves.data.regular;
   }
   return balances;
 }
 
-export const fetchDAppBalance = async () => {
+export const fetchDAppBalance = async (apiBase) => {
   const reserveData = await nodeInteraction.accountDataByKey('reserve', config.dApp, apiBase);
   return reserveData.value;
 }
 
-export const fetchOrders = async () => {
+export const fetchOrders = async (apiBase) => {
   try {
-    const openOrders = await fetchOpenOrders();
-    const ordersData = await fetchAccountDataByKey(config.dApp, openOrders.join('|'))
+    const ordersData = await fetchAccountData(config.dApp, 'order_.*', apiBase)
     return ordersData;
   } catch (e) {
     throw e

@@ -42,6 +42,12 @@
   let tosser = null;
 
   export default {
+    props: {
+      pair: {
+				type: Object,
+				default: () => {},
+			},
+    },
     data: () => ({
     }),
     components: {
@@ -51,7 +57,7 @@
       Account
     },
     computed: {
-      ...mapGetters(['getOrders', 'getBalance', 'getCurrentPair', 'getBuyOrders', 'getSellOrders']),
+      ...mapGetters(['getOrders', 'getBalance', 'getCurrentPair', 'getBuyOrders', 'getSellOrders', 'getAssets']),
       vstBalance() {
         return (this.getBalance && this.getBalance[config.assetId] && (`(balance ${this.getBalance[config.assetId]})`)) || '';
       },
@@ -66,8 +72,26 @@
         return `${amountPart} / ${pricePart}`
       },
     },
+    watch: {
+      // pair: {
+      //   immediate: true,
+      //   async handler(value) {
+      //     if (value && value.amountAsset && value.priceAsset) {
+      //       await this.fetchOrders()
+      //       if (this.getAssets && this.getAssets[value.amountAsset] && this.getAssets[value.priceAsset]) {
+      //         this.setCurrentPair({
+      //           amountAsset: value.amountAsset,
+      //           amountAssetName: this.getAssets[value.amountAsset].name,
+      //           priceAsset: value.priceAsset,
+      //           priceAssetName: this.getAssets[value.priceAsset.name],
+      //         })
+      //       }
+      //     }
+      //   },
+      // },
+    },
     methods: {
-      ...mapActions(['fetchOrders', 'fetchBalance', 'makeSell', 'fetchDAppBalance', 'fetchDexStatus', 'checkKeeper']),
+      ...mapActions(['fetchOrders', 'fetchBalance', 'makeSell', 'fetchDAppBalance', 'fetchDexStatus', 'checkKeeper', 'setCurrentPair']),
       fetchData() {
         this.fetchBalance();
         this.fetchOrders();
