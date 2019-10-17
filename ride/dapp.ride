@@ -3,7 +3,7 @@
 {-# SCRIPT_TYPE ACCOUNT #-}
 
 let uTokenId = base58'GHh7EMnVnUBCYNJMktuLPVr3P2oCqBCb4c87fBCZ5CzY'
-let admin = addressFromStringValue("3P96VpN2dBS1111111ydADa5a6AD1Un9iUv")
+let admin = base58'GfQfmZD32YEkaMEgDUB7iesZaJf7NysjxxSheA8PzSYV'.addressFromPublicKey()
 
 let shutdownFlag = match this.getBoolean("shutdown_flag") {
     case bool:Boolean => bool
@@ -170,8 +170,9 @@ func makeBuy(amountAsset:String, amount:Int, all:Boolean, password:String) = {
 }
 
 @Callable(i)
-func takeSell(orderId:String, sig:String) = {
+func takeSell(id:String, sig:String) = {
     if shutdownFlag then throw(shutdownMessage) else
+        let orderId = "order_" + id
         let payment = i.payment.valueOrErrorMessage("Where is payment?")
         let priceAssetAmount = payment.amount
         if priceAssetAmount <= 0 then throw("Amount must be positive") else
@@ -199,7 +200,7 @@ func takeSell(orderId:String, sig:String) = {
                     if !valid then throw("The order is private") else
                         let amount = priceAssetAmount * orderAmount / orderPriceAssetAmount
                         if amount == 0 then throw("Invalid amount") else
-                            if orderAll && (amount < orderAmount) then throw("You must take all or none") else
+                            if orderAll && (amount < orderAmount) then throw("You must take all or nothing") else
                                 if amount > orderAmount - orderSpent then throw("Not enougth asset in order") else
                                     let newData = data.dropRight(parts[8].size()) + (orderSpent + amount).toString()
                                     let toCaller = ScriptTransfer(i.caller, amount, if orderAmountAsset == "WAVES" then unit else orderAmountAsset.fromBase58String())
@@ -211,8 +212,9 @@ func takeSell(orderId:String, sig:String) = {
 }
 
 @Callable(i)
-func takeBuy(orderId:String, sig:String) = {
+func takeBuy(id:String, sig:String) = {
     if shutdownFlag then throw(shutdownMessage) else
+        let orderId = "order_" + id
         let payment = i.payment.valueOrErrorMessage("where is payment?")
         let amount = payment.amount
         if amount <= 0 then throw("amount must be positive") else
@@ -240,7 +242,7 @@ func takeBuy(orderId:String, sig:String) = {
                     if !valid then throw("The order is private") else
                         let priceAssetAmount = amount * orderPriceAssetAmount / orderAmount
                         if priceAssetAmount == 0 then throw("Invalid amount") else
-                            if orderAll && (priceAssetAmount < orderPriceAssetAmount) then throw("You must take all or none") else
+                            if orderAll && (priceAssetAmount < orderPriceAssetAmount) then throw("You must take all or nothing") else
                                 if priceAssetAmount > orderPriceAssetAmount - orderSpent then throw("not enougth asset in order") else
                                     let newData = data.dropRight(parts[8].size()) + (orderSpent + priceAssetAmount).toString()
                                     let toCaller = ScriptTransfer(i.caller, priceAssetAmount, if orderPriceAsset == "WAVES" then unit else orderPriceAsset.fromBase58String())
@@ -252,7 +254,8 @@ func takeBuy(orderId:String, sig:String) = {
 }
 
 @Callable(i)
-func returnSell(orderId:String) = {
+func returnSell(id:String) = {
+    let orderId = "order_" + id
     let data = this.getString(orderId).valueOrErrorMessage("Invalid order id")
 
     let parts = data.split("_")
@@ -268,9 +271,9 @@ func returnSell(orderId:String) = {
     let orderSpent = parts[8].parseIntValue()
 
     if orderType != "sell" then throw("Invalid order type") else
-        if (orderOwner != i.caller) && !shutdownFlag then throw("return should be called by order owner") else
+        if (orderOwner != i.caller) && !shutdownFlag then throw("Return should be called by order owner") else
             let returnAmount = orderAmount - orderSpent
-            if returnAmount <= 0 then throw("nothing to return") else
+            if returnAmount <= 0 then throw("Nothing to return") else
                 let newData = data.dropRight(parts[8].size()) + (orderAmount).toString()
                 ScriptResult(
                     WriteSet(DataEntry(orderId, newData)::nil),
@@ -279,7 +282,8 @@ func returnSell(orderId:String) = {
 }
 
 @Callable(i)
-func returnBuy(orderId:String) = {
+func returnBuy(id:String) = {
+    let orderId = "order_" + id
     let data = this.getString(orderId).valueOrErrorMessage("Invalid order id")
 
     let parts = data.split("_")
@@ -297,7 +301,7 @@ func returnBuy(orderId:String) = {
     if orderType != "buy" then throw("Invalid order type") else
         if (orderOwner != i.caller) && !shutdownFlag then throw("Return should be called by order owner") else
             let returnAmount = orderPriceAssetAmount - orderSpent
-            if returnAmount <= 0 then throw("nothing to return") else
+            if returnAmount <= 0 then throw("Nothing to return") else
                 let newData = data.dropRight(parts[8].size()) + (orderPriceAssetAmount).toString()
                 ScriptResult(
                     WriteSet(DataEntry(orderId, newData)::nil),
@@ -332,7 +336,7 @@ func withdraw(mode:String) = {
 }
 
 @Callable(i)
-func doShutdown(msg: String) = {
+func shutdown(msg: String) = {
     if i.caller != admin then throw("You should be an admin") else
         WriteSet(DataEntry("shutdown_flag", true)::DataEntry("shutdown_message", msg)::nil)
 }

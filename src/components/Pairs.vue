@@ -45,6 +45,7 @@
             :items-per-page="-1"
             hide-default-footer
             height="100%"
+            mobile-breakpoint="0"
             >
             <template v-slot:top>
                 <v-text-field v-model="search" label="Search" prepend-inner-icon="mdi-magnify" clearable>

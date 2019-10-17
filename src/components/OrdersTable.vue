@@ -8,6 +8,7 @@
 		hide-default-footer
 		sort-by="price"
 		:sort-desc="true"
+		mobile-breakpoint="0"
 		>
 			<template v-slot:item.action="{ item }">
 				<v-btn @click.stop="showOrderTakeDialog({ order: item })" x-small icon><v-icon small>mdi-cart-outline</v-icon></v-btn>

@@ -31,5 +31,8 @@ export default {
   #content {
     height: calc(100vh - 56px);
   }
-  /* html { overflow-y: auto !important } */
+  html {
+    min-width: 1280px;
+    overflow-x: auto !important;
+  }
 </style>
