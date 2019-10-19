@@ -8,7 +8,7 @@
 		hide-default-footer
 		sort-by="price"
 		:sort-desc="true"
-		mobile-breakpoint="0"
+		:mobile-breakpoint="0"
 		>
 			<template v-slot:item.action="{ item }">
 				<v-btn @click.stop="showOrderTakeDialog({ order: item })" x-small icon><v-icon small>mdi-cart-outline</v-icon></v-btn>
@@ -57,10 +57,10 @@
 			amount: 0,
 			password: '',
 			headers: [
-				{ text: '', value: 'info', sortable: false, align: 'left' },
-				{ text: 'Price', value: 'priceFmt', align: 'right' },
-				{ text: 'Amount', value: 'amountFmt', align: 'right' },
-				{ text: 'Total', value: 'priceAssetAmountFmt', align: 'right' },
+				{ text: '', value: 'info', sortable: false, align: 'start' },
+				{ text: 'Price', value: 'priceFmt', align: 'end' },
+				{ text: 'Amount', value: 'amountFmt', align: 'end' },
+				{ text: 'Total', value: 'priceAssetAmountFmt', align: 'end' },
 				{ text: 'Actions', value: 'action', sortable: false, align: 'center' },
 			],
 		}),

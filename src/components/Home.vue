@@ -8,7 +8,7 @@
       </v-col>
       <v-col cols="7" class="d-flex flex-column py-0" style="height: 100%">
         <v-row class="pb-1">
-          <v-card class="d-flex flex-column flex-grow-1" style="height: 100%" outlined>
+          <v-card class="d-flex flex-column flex-grow-1" style="height: 100%">
             <v-card-text class="d-flex justify-center">
               <span>{{ currentPairStatus }}</span>
             </v-card-text>
@@ -22,8 +22,11 @@
         </v-row>
       </v-col>
       <v-col class="d-flex flex-column pl-5 py-0" cols="3" style="height: 100%">
-        <v-row class="flex-grow-1" style="height: 100%">
+        <v-row class="pb-1" style="height: 60%">
           <Account />
+        </v-row>
+        <v-row class="pt-1" style="height: 40%">
+          <Liquidity />
         </v-row>
       </v-col>
     </v-row>
@@ -32,11 +35,12 @@
 
 <script>
   import { mapGetters, mapActions } from 'vuex';
-  import config from '../config';
-  import Pairs from './Pairs';
-  import BuyOrders from './BuyOrders';
-  import SellOrders from './SellOrders';
-  import Account from './Account';
+  import config from '@/config';
+  import Pairs from '@/components/Pairs';
+  import BuyOrders from '@/components/BuyOrders';
+  import SellOrders from '@/components/SellOrders';
+  import Account from '@/components/Account';
+  import Liquidity from '@/components/Liquidity';
   // import _ from 'lodash';
 
   let tosser = null;
@@ -54,10 +58,18 @@
       Pairs,
       BuyOrders,
       SellOrders,
-      Account
+      Account,
+      Liquidity,
     },
     computed: {
-      ...mapGetters(['getOrders', 'getBalance', 'getCurrentPair', 'getBuyOrders', 'getSellOrders', 'getAssets']),
+      ...mapGetters([
+        'getOrders',
+        'getBalance',
+        'getCurrentPair',
+        'getBuyOrders',
+        'getSellOrders',
+        'getAssets'
+      ]),
       vstBalance() {
         return (this.getBalance && this.getBalance[config.assetId] && (`(balance ${this.getBalance[config.assetId]})`)) || '';
       },
@@ -91,7 +103,15 @@
       // },
     },
     methods: {
-      ...mapActions(['fetchOrders', 'fetchBalance', 'makeSell', 'fetchDAppBalance', 'fetchDexStatus', 'checkKeeper', 'setCurrentPair']),
+      ...mapActions([
+        'fetchOrders',
+        'fetchBalance',
+        'makeSell',
+        'fetchDAppBalance',
+        'fetchDexStatus',
+        'checkKeeper',
+        'setCurrentPair'
+      ]),
       fetchData() {
         this.fetchBalance();
         this.fetchOrders();

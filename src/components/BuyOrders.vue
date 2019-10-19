@@ -1,5 +1,5 @@
 <template>
-	<v-card class="d-flex flex-column flex-grow-1" style="height: 100%" outlined>
+	<v-card class="d-flex flex-column flex-grow-1" style="height: 100%">
 		<v-card-title>
 			<span class="title">Buy orders</span>
 			<v-spacer />

@@ -38,8 +38,8 @@
 			</v-card-text>
 			<v-card-actions>
 				<v-spacer />
-				<v-btn text color="primary" @click.stop="take" :loading="takeLoading">Take</v-btn>
-				<v-btn text color="primary" @click.stop="closeOrderTakeDialog">Close</v-btn>
+				<v-btn text @click.stop="take" :loading="takeLoading">Take</v-btn>
+				<v-btn text @click.stop="closeOrderTakeDialog">Close</v-btn>
 			</v-card-actions>
 		</v-card>
 	</v-dialog>

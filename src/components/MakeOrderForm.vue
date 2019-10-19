@@ -1,7 +1,7 @@
 <template>
 	<v-dialog v-model="dialog" max-width="30%" :transition="false">
 		<template v-slot:activator="{ on }">
-			<v-btn text color="primary" dark v-on="on">New Order</v-btn>
+			<v-btn text v-on="on">New Order</v-btn>
 		</template>
 		<v-card>
 			<v-card-title>
@@ -16,11 +16,6 @@
 					label="Amount asset ID"
 					:rules="[v => !!v || 'Item is required', v => v in getAssets || 'Add asset to the tradable list', v => v !== priceAsset || 'Invalid asset']"
 				></v-autocomplete>
-				<!-- <v-text-field 
-					v-model="amountAsset"
-					label="Amount asset ID"
-					:rules="[v => !!v || 'Item is required', v => v in getAssets || 'Add asset to the tradable list']"
-				></v-text-field> -->
 				<v-autocomplete
 					v-model="priceAsset"
 					:items="getAssetsArray"
@@ -29,11 +24,6 @@
 					label="Price asset ID"
 					:rules="[v => !!v || 'Item is required', v => v in getAssets || 'Add asset to the tradable list', v => v !== amountAsset || 'Invalid asset']"
 				></v-autocomplete>
-				<!-- <v-text-field
-					v-model="priceAsset"
-					label="Price asset ID"
-					:rules="[v => !!v || 'Item is required', v => v in getAssets || 'Add asset to the tradable list']"
-				></v-text-field> -->
 				<v-text-field
 					v-model="amount"
 					label="Amount"
@@ -55,7 +45,7 @@
 				<v-switch
 					:disabled="!checkStatus"
 					v-model="all"
-					label="All or none (PRO)"
+					label="All or nothing (PRO)"
 				></v-switch>
 				<v-switch
 					:disabled="!checkStatus"
@@ -69,12 +59,19 @@
 					v-model="password"
 					label="Password"
 				></v-text-field>
-				<v-btn v-if="!checkStatus" text color="primary" @click="showUpgradeDialog">Upgrade to PRO</v-btn>
+				<v-tooltip bottom v-if="!checkStatus">
+					<template v-slot:activator="{ on }">
+					<v-btn v-on="on" text @click="showUpgradeDialog">
+						Upgrade to PRO
+					</v-btn>
+					</template>
+					<span>Get access to take-all-or-nothing and password protected orders</span>
+				</v-tooltip>
 			</v-card-text>
 			<v-card-actions>
 				<v-spacer />
-				<v-btn text color="primary" @click="create" :loading="createLoading">Create</v-btn>
-				<v-btn text color="primary" @click="dialog = false">Close</v-btn>
+				<v-btn text @click="create" :loading="createLoading">Create</v-btn>
+				<v-btn text @click="dialog = false">Close</v-btn>
 			</v-card-actions>
 		</v-card>
 	</v-dialog>

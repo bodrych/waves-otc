@@ -1,5 +1,5 @@
 <template>
-	<v-alert type="info" :icon="false" outlined>
+	<v-alert :icon="false" outlined>
 		You don't have enough OTCu. You can get it from dApp.
 		<v-text-field
 			light
@@ -15,7 +15,7 @@
 			suffix="WAVES"
 			readonly
 		></v-text-field>
-		<v-btn text color="primary" @click="buyOTCuFromDApp" :loading="buyLoading">Buy</v-btn>
+		<v-btn text @click="buyOTCuFromDApp" :loading="buyLoading">Buy</v-btn>
 	</v-alert>
 </template>
 

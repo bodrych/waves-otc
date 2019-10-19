@@ -3,15 +3,15 @@ import Vuex from 'vuex'
 import * as API from './api';
 import config from '@/config';
 import _ from 'lodash';
-// import VuexPersistence from 'vuex-persist'
+import VuexPersistence from 'vuex-persist'
 
 Vue.use(Vuex)
 
-// const persist = new VuexPersistence({
-//   reducer: (state) => ({
-//     appiBase: state.apiBase,
-//   }),
-// })
+const persist = new VuexPersistence({
+  reducer: (state) => ({
+    darkTheme: state.darkTheme,
+  }),
+})
 
 export default new Vuex.Store({
   state: {
@@ -53,6 +53,7 @@ export default new Vuex.Store({
     upgradeDialogDisplay: false,
     orderTakeDialogDisplay: false,
     takeOrder: {},
+    darkTheme: false,
   },
 
   mutations: {
@@ -71,6 +72,7 @@ export default new Vuex.Store({
     setUpgradeDialogDisplay: (state, val) => state.upgradeDialogDisplay = val,
     setOrderTakeDialogDisplay: (state, val) => state.orderTakeDialogDisplay = val,
     setTakeOrder: (state, val) => state.takeOrder = val,
+    setDarkTheme: (state, val) => state.darkTheme = val,
   },
 
   actions: {
@@ -182,6 +184,9 @@ export default new Vuex.Store({
     closeOrderTakeDialog({ commit }) {
       commit('setOrderTakeDialogDisplay', false);
     },
+    setDarkTheme({ commit }, value) {
+      commit('setDarkTheme', value);
+    }
   },
 
   getters: {
@@ -190,111 +195,132 @@ export default new Vuex.Store({
     getPublicKey: state => state.publicState && state.publicState.account && state.publicState.account.publicKey,
     getBalance: state => state.balance,
     getAssetBalanceFloat: (state, getters) => assetId => getters.getLogin ? +(getters.getBalance[assetId] / 10 ** getters.getAssets[assetId].decimals).toFixed(getters.getAssets[assetId].decimals) : 0,
-    getOrders: (state, getters) => {
-      return _.map(state.orders, item => {
-        const parts = item.value.split('_');
-        const id = item.key.split('_')[1];
-        const type = parts[0];
-        const totalAmount = parseInt(parts[1]);
-        const amountAsset = parts[2];
-        const amountAssetName = getters.getAssets[amountAsset].name;
-        const totalPriceAssetAmount = parseInt(parts[3]);
-        const priceAsset = parts[4];
-        const priceAssetName = getters.getAssets[priceAsset].name;
-        const spent = parseInt(parts[8]);
-        const price = totalPriceAssetAmount / totalAmount;
-        
-        const amount = type === 'sell' ? totalAmount - spent : (totalPriceAssetAmount - spent) / price;
-        const amountFmt = parseFloat((amount / (10 ** getters.getAssets[amountAsset].decimals)).toFixed(getters.getAssets[amountAsset].decimals));
-        
-        const priceAssetAmount = type === 'buy' ? totalPriceAssetAmount - spent : (totalAmount - spent) * price;
-        const priceAssetAmountFmt = parseFloat((priceAssetAmount / (10 ** getters.getAssets[priceAsset].decimals)).toFixed(getters.getAssets[priceAsset].decimals));
-        
-        const owner = parts[5];
-        const all = parts[6] === 'true' ? true : false;
-        const password = parts[7];
-        const priceFmt = parseFloat((price * (10 ** getters.getAssets[amountAsset].decimals) / (10 ** getters.getAssets[priceAsset].decimals)).toFixed(getters.getAssets[priceAsset].decimals));
-        
-        return {
-          id, type,
-          totalAmount, amount, amountFmt, amountAsset, amountAssetName, 
-          totalPriceAssetAmount, priceAssetAmount, priceAssetAmountFmt, priceAsset, priceAssetName,
-          owner, all, password, spent, price, priceFmt, };
-        });
-      },
-      getOpenOrders: (state, getters) => {
-        return _.filter(getters.getOrders, item => item.amount !== 0)
-      },
-      getCurrentPair: state => state.currentPair,
-      getPairs: (state, getters) => _.uniqBy(getters.getOrders, item => item.amountAsset + item.priceAsset),
-      getSellOrders: (state, getters) => {
-        return _.filter(getters.getOpenOrders, order => {
-          return order.type === 'sell' && order.amountAsset === state.currentPair.amountAsset && order.priceAsset === state.currentPair.priceAsset
-        });
-      },
-      getBuyOrders: (state, getters) => {
-        return _.filter(getters.getOpenOrders, order => {
-          return order.type === 'buy' && order.amountAsset === state.currentPair.amountAsset && order.priceAsset === state.currentPair.priceAsset
-        });
-      },
-      getLogin: state => state.login,
-      getAssets: state => state.assets,
-      getAssetsArray: (state, getters) => _.chain(getters.getAssets).values().sortBy('name').value(),
-      checkStatus: state => state.status.unlimited || state.status.deadline > (new Date()).getTime(),
-      getStatus: state => state.status,
-      getDexStatus: state => state.dexStatus,
-      getDAppBalance: state => state.dAppBalance,
-      getDexOrderbook: state => state.dexOrderbook,
-      getDexSuitableAmount: state => _.chain(state.dexOrderbook.asks).filter(ask => ask.price <= 1e8).sumBy('amount').value(),
-      checkRequiredAmount: (state, getters) => requiredAmount => {
-        const amount = requiredAmount * 1e8;
-        return {
-          userOTCu: getters.getLogin && getters.getBalance ? getters.getBalance[config.OTCu] >= amount : true,
-          userWaves: getters.getLogin && getters.getBalance? getters.getBalance['WAVES'] >= amount : true,
-          dex: getters.getDexSuitableAmount >= 0,
-          dApp: getters.getDexSuitableAmount >= amount,
-        }
-      },
-      uTokenRefill: (state, getters) => requiredAmount => {
-        const check = getters.checkRequiredAmount(requiredAmount);
-        return {
-          showAlert: !check.userOTCu && !check.dex && !check.dApp && !check.userWaves,
-          showBuyDex: !check.userOTCu && check.dex,
-          showBuyDApp: !check.userOTCu && !check.dex && check.dApp,
-          inWaves: !check.userOTCu && !check.dex && !check.dApp && check.userWaves,
-        }
-      },
-      calcDexBuyData: (state, getters) => amount => {
-        const data = getters.getDexOrderbook;
-        const maxBuyAmount = _.sumBy(data.asks, 'amount');
-        let price = 0
-        let targetAmount = amount
-        let priceAssetAmount = 0
-        const asks = data.asks
-        for (let a = 0; a < asks.length; a++) {
-          price = asks[a].price
-          if (targetAmount <= asks[a].amount) {
-            priceAssetAmount += Math.trunc(targetAmount * price / 1e8)
-            targetAmount = 0
-          } else {
-            priceAssetAmount += Math.trunc(asks[a].amount * price / 1e8)
-            targetAmount -= asks[a].amount
+    getOrders: (state, getters) => _.map(state.orders, item => {
+      const parts = item.value.split('_');
+      const id = item.key.split('_')[1];
+      const type = parts[0];
+      const totalAmount = parseInt(parts[1]);
+      const amountAsset = parts[2];
+      const amountAssetName = getters.getAssets[amountAsset].name;
+      const totalPriceAssetAmount = parseInt(parts[3]);
+      const priceAsset = parts[4];
+      const priceAssetName = getters.getAssets[priceAsset].name;
+      const spent = parseInt(parts[8]);
+      const price = totalPriceAssetAmount / totalAmount;
+      
+      const amount = type === 'sell' ? totalAmount - spent : (totalPriceAssetAmount - spent) / price;
+      const amountFmt = parseFloat((amount / (10 ** getters.getAssets[amountAsset].decimals)).toFixed(getters.getAssets[amountAsset].decimals));
+      
+      const priceAssetAmount = type === 'buy' ? totalPriceAssetAmount - spent : (totalAmount - spent) * price;
+      const priceAssetAmountFmt = parseFloat((priceAssetAmount / (10 ** getters.getAssets[priceAsset].decimals)).toFixed(getters.getAssets[priceAsset].decimals));
+      
+      const owner = parts[5];
+      const all = parts[6] === 'true' ? true : false;
+      const password = parts[7];
+      const priceFmt = parseFloat((price * (10 ** getters.getAssets[amountAsset].decimals) / (10 ** getters.getAssets[priceAsset].decimals)).toFixed(getters.getAssets[priceAsset].decimals));
+      
+      return {
+        id, type,
+        totalAmount, amount, amountFmt, amountAsset, amountAssetName, 
+        totalPriceAssetAmount, priceAssetAmount, priceAssetAmountFmt, priceAsset, priceAssetName,
+        owner, all, password, spent, price, priceFmt, };
+      }),
+    getOpenOrders: (state, getters) => _.filter(getters.getOrders, item => item.amount !== 0),
+    getCurrentPair: state => state.currentPair,
+    getPairs: (state, getters) => _.uniqBy(getters.getOrders, item => item.amountAsset + item.priceAsset),
+    getSellOrders: (state, getters) => _.filter(getters.getOpenOrders, order => {
+      return order.type === 'sell' && order.amountAsset === state.currentPair.amountAsset && order.priceAsset === state.currentPair.priceAsset
+    }),
+    getBuyOrders: (state, getters) => _.filter(getters.getOpenOrders, order => {
+      return order.type === 'buy' && order.amountAsset === state.currentPair.amountAsset && order.priceAsset === state.currentPair.priceAsset
+    }),
+    getLiquidity: (state, getters) => {
+      let liquidity = {};
+      _.each(getters.getOpenOrders, order => {
+        if (order.type === 'sell') {
+          if (!liquidity[order.amountAsset]) {
+            liquidity[order.amountAsset] = {
+              id: order.amountAsset,
+              name: getters.getAssets[order.amountAsset].name,
+              sell: 0,
+              buy: 0,
+            }
           }
-          if (targetAmount === 0) {
-            break
+          liquidity[order.amountAsset]['sell'] += order.amountFmt;
+        } else if (order.type === 'buy') {
+          if (!liquidity[order.priceAsset]) {
+            liquidity[order.priceAsset] = {
+              id: order.priceAsset,
+              name: getters.getAssets[order.priceAsset].name,
+              sell: 0,
+              buy: 0,
+            }
           }
+          liquidity[order.priceAsset]['buy'] += order.priceAssetAmountFmt;
         }
-        return {
-          maxBuyAmount,
-          price,
-          priceAssetAmount,
-        }
-      },
-      upgradeDialogDisplay: state => state.upgradeDialogDisplay,
-      orderTakeDialogDisplay: state => state.orderTakeDialogDisplay,
-      getTakeOrder: state => state.takeOrder,
+      });
+      return liquidity;
     },
+    getLiquidityArray: (state, getters) => _.chain(getters.getLiquidity).values().orderBy(['sell'], ['desc']).value(),
+    getLogin: state => state.login,
+    getAssets: state => state.assets,
+    getAssetsArray: (state, getters) => _.chain(getters.getAssets).values().sortBy('name').value(),
+    checkStatus: state => state.status.unlimited || state.status.deadline > (new Date()).getTime(),
+    getStatus: state => state.status,
+    getDexStatus: state => state.dexStatus,
+    getDAppBalance: state => state.dAppBalance,
+    getDexOrderbook: state => state.dexOrderbook,
+    getDexSuitableAmount: state => _.chain(state.dexOrderbook.asks).filter(ask => ask.price <= 1e8).sumBy('amount').value(),
+    checkRequiredAmount: (state, getters) => requiredAmount => {
+      const amount = requiredAmount * 1e8;
+      return {
+        userOTCu: getters.getLogin && getters.getBalance ? getters.getBalance[config.OTCu] >= amount : true,
+        userWaves: getters.getLogin && getters.getBalance? getters.getBalance['WAVES'] >= amount : true,
+        dex: getters.getDexSuitableAmount >= 0,
+        dApp: getters.getDexSuitableAmount >= amount,
+      }
+    },
+    uTokenRefill: (state, getters) => requiredAmount => {
+      const check = getters.checkRequiredAmount(requiredAmount);
+      return {
+        showAlert: !check.userOTCu && !check.dex && !check.dApp && !check.userWaves,
+        showBuyDex: !check.userOTCu && check.dex,
+        showBuyDApp: !check.userOTCu && !check.dex && check.dApp,
+        inWaves: !check.userOTCu && !check.dex && !check.dApp && check.userWaves,
+      }
+    },
+    calcDexBuyData: (state, getters) => amount => {
+      const data = getters.getDexOrderbook;
+      const maxBuyAmount = _.sumBy(data.asks, 'amount');
+      let price = 0
+      let targetAmount = amount
+      let priceAssetAmount = 0
+      const asks = data.asks
+      for (let a = 0; a < asks.length; a++) {
+        price = asks[a].price
+        if (targetAmount <= asks[a].amount) {
+          priceAssetAmount += Math.trunc(targetAmount * price / 1e8)
+          targetAmount = 0
+        } else {
+          priceAssetAmount += Math.trunc(asks[a].amount * price / 1e8)
+          targetAmount -= asks[a].amount
+        }
+        if (targetAmount === 0) {
+          break
+        }
+      }
+      return {
+        maxBuyAmount,
+        price,
+        priceAssetAmount,
+      }
+    },
+    upgradeDialogDisplay: state => state.upgradeDialogDisplay,
+    orderTakeDialogDisplay: state => state.orderTakeDialogDisplay,
+    getTakeOrder: state => state.takeOrder,
+    getDarkTheme: state => state.darkTheme,
+  },
 
-    // plugins: [persist.plugin]
-  })
+  plugins: [persist.plugin]
+})
   

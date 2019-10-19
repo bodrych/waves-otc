@@ -1,11 +1,11 @@
 <template>
-    <v-card class="d-flex flex-column flex-grow-1" style="height: 100%" outlined>
+    <v-card class="d-flex flex-column flex-grow-1" style="height: 100%">
         <v-card-title>
             <span class="title">Pairs</span>
             <v-spacer />
-            <v-tooltip bottom>
+            <v-tooltip right>
                 <template v-slot:activator="{ on }">
-                    <v-btn text v-on="on" color="primary" @click.stop="showDialog">Add asset</v-btn>
+                    <v-btn v-on="on" @click.stop="showDialog" small text>Add asset</v-btn>
                 </template>
                 <span>Add new asset to the trade whitelist for 100 OTCu</span>
             </v-tooltip>
@@ -19,7 +19,7 @@
                             label="Asset ID"
                             :rules="[v => !!v || 'Item is required', v => !(v in getAssets) || 'Asset in whitelist already']"
                         ></v-text-field>
-                        <v-alert v-if="uTokenRefill(requiredAmount).showAlert" type="info" :icon="false" outlined>
+                        <v-alert v-if="uTokenRefill(requiredAmount).showAlert" :icon="false" outlined>
                             The price is 100 OTCu or WAVES
                         </v-alert>
                         <buyDEX v-if="uTokenRefill(requiredAmount).showBuyDex" :targetAmount="requiredAmount - balance" />
@@ -27,8 +27,8 @@
                     </v-card-text>
                     <v-card-actions>
                         <v-spacer />
-                        <v-btn text color="primary" @click="doAddAsset()" :disabled="!getLogin" :loading="addAssetLoading">Add asset</v-btn>
-                        <v-btn text color="primary" @click="dialog = false">Close</v-btn>
+                        <v-btn text @click="doAddAsset()" :disabled="!getLogin" :loading="addAssetLoading">Add asset</v-btn>
+                        <v-btn text @click="dialog = false">Close</v-btn>
                     </v-card-actions>
                 </v-card>
             </v-dialog>
@@ -44,8 +44,9 @@
             :custom-filter="dataFilter"
             :items-per-page="-1"
             hide-default-footer
+            hide-default-header
             height="100%"
-            mobile-breakpoint="0"
+            :mobile-breakpoint="0"
             >
             <template v-slot:top>
                 <v-text-field v-model="search" label="Search" prepend-inner-icon="mdi-magnify" clearable>
@@ -60,7 +61,7 @@
                 </v-text-field>
             </template>
             <template v-slot:item.amountAssetName="{ item }">
-                <span>{{ item.amountAssetName + ' / ' + item.priceAssetName }}</span>
+                <span style="cursor: pointer;">{{ item.amountAssetName + ' / ' + item.priceAssetName }}</span>
             </template>
         </v-data-table>
     </v-card-text>

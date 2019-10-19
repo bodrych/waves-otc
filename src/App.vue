@@ -7,15 +7,15 @@
         </v-alert>
       </template>
     </notifications>
-    <v-app-bar app short dark color="primary">
-      <v-toolbar-title class="headline text-uppercase">
-        <span>OTC</span>
+    <v-app-bar app short>
+      <v-toolbar-title>
+        <span class="headline">OTC</span>
       </v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-btn href="https://github.com/bodrych/waves-otc" target="_blank" icon><v-icon>mdi-github-circle</v-icon></v-btn>
+      <!-- <v-btn href="https://github.com/bodrych/" target="_blank" icon><v-icon>mdi-github-circle</v-icon></v-btn> -->
     </v-app-bar>
 
-    <v-content id="content">
+    <v-content>
       <RouterView/>
     </v-content>
   </v-app>
@@ -28,11 +28,9 @@ export default {
 </script>
 
 <style>
-  #content {
-    height: calc(100vh - 56px);
-  }
   html {
     min-width: 1280px;
+    height: 100vh;
     overflow-x: auto !important;
   }
 </style>

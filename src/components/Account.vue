@@ -1,19 +1,18 @@
 <template>
-	<v-card class="d-flex flex-column flex-grow-1" style="height: 100%" outlined>
+	<v-card class="d-flex flex-column flex-grow-1" style="height: 100%">
 		<v-card-title>
 			<span class="title">Info</span>
 			<v-spacer />
-			<!-- <v-tooltip bottom v-if="!getLogin">
+			<v-tooltip left v-if="!getStatus.unlimited">
 				<template v-slot:activator="{ on }">
-				<v-btn text v-on="on" color="primary" @click="checkKeeper">
-					Login
+				<v-btn v-on="on" v-if="!getStatus.unlimited" text @click="showUpgradeDialog">
+					Upgrade to PRO
 				</v-btn>
 				</template>
-				<span>Login with Waves Keeper</span>
-			</v-tooltip> -->
-			<v-btn v-if="!getStatus.unlimited" text color="primary" @click="showUpgradeDialog">Upgrade</v-btn>
+				<span>Get access to take-all-or-nothing and password protected orders</span>
+			</v-tooltip>
 		</v-card-title>
-		<v-card-text>
+		<v-card-text class="d-flex flex-column" style="overflow: auto">
 			<template v-if="getLogin">
 				<p>{{ getAddress }}</p>
 				<p>Current status: {{ status }}</p>
@@ -26,6 +25,7 @@
 				disabled
 			>
 			</v-text-field>
+			<v-switch v-model="darkTheme" label="Dark mode"></v-switch>
 		</v-card-text>
 		<v-dialog v-model="dialogDisplay" max-width="30%" :transition="false">
 			<v-card>
@@ -49,8 +49,8 @@
 				</v-card-text>
 				<v-card-actions>
 					<v-spacer />
-					<v-btn text color="primary" @click="doBuyPro(targetStatus)" :disabled="!getLogin" :loading="buyProLoading">Buy PRO</v-btn>
-					<v-btn text color="primary" @click="closeUpgradeDialog">Close</v-btn>
+					<v-btn text @click="doBuyPro(targetStatus)" :disabled="!getLogin" :loading="buyProLoading">Buy PRO</v-btn>
+					<v-btn text @click="closeUpgradeDialog">Close</v-btn>
 				</v-card-actions>
 			</v-card>
 		</v-dialog>
@@ -97,6 +97,7 @@
 				'getBalance',
 				'upgradeDialogDisplay',
 				'getApiBase',
+				'getDarkTheme',
 			]),
 			status() {
 				if (this.getStatus.unlimited) {
@@ -118,6 +119,15 @@
 					if (value === false) this.closeUpgradeDialog();
 				}
 			},
+			darkTheme: {
+				get() {
+					return this.getDarkTheme;
+				},
+				set(value) {
+					this.$vuetify.theme.dark = value;
+					return this.setDarkTheme(value);
+				},
+			}
 		},
 		watch: {
 			targetStatus(value) {
@@ -137,6 +147,7 @@
 				'showUpgradeDialog',
 				'closeUpgradeDialog',
 				'fetchAddressStatus',
+				'setDarkTheme',
 			]),
 			showDialog() {
 				this.dialog = true;
