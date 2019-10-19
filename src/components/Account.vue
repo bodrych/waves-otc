@@ -12,20 +12,23 @@
 				<span>Get access to take-all-or-nothing and password protected orders</span>
 			</v-tooltip>
 		</v-card-title>
-		<v-card-text class="d-flex flex-column" style="overflow: auto">
+		<v-card-text class="d-flex flex-column" style="overflow: auto; height: 100%">
 			<template v-if="getLogin">
 				<p>{{ getAddress }}</p>
 				<p>Current status: {{ status }}</p>
 			</template>
+			<p>Trading fee: 0.005 WAVES</p>
+			<v-switch class="mt-0" v-model="darkTheme" label="Dark mode"></v-switch>
+			<v-spacer/>
 			<v-text-field 
 				v-model="getApiBase"
 				label="Data provider"
 				hint="You can change it in Waves Keeper settings"
 				persistent-hint
 				disabled
+				class="flex-grow-0"
 			>
 			</v-text-field>
-			<v-switch v-model="darkTheme" label="Dark mode"></v-switch>
 		</v-card-text>
 		<v-dialog v-model="dialogDisplay" max-width="30%" :transition="false">
 			<v-card>

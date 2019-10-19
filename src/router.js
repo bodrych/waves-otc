@@ -12,7 +12,7 @@ export default new Router({
       path: '/',
       name: 'home',
       component: Home,
-      // props: (route) => ({ pair: { amountAsset: route.query.amountAsset, priceAsset: route.query.priceAsset } })
+      // props: (route) => ({ order: route.query.order })
     },
   ]
 })

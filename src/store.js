@@ -244,6 +244,7 @@ export default new Vuex.Store({
               name: getters.getAssets[order.amountAsset].name,
               sell: 0,
               buy: 0,
+              sum() { return this.sell + this.buy },
             }
           }
           liquidity[order.amountAsset]['sell'] += order.amountFmt;
@@ -254,6 +255,7 @@ export default new Vuex.Store({
               name: getters.getAssets[order.priceAsset].name,
               sell: 0,
               buy: 0,
+              sum() { return this.sell + this.buy },
             }
           }
           liquidity[order.priceAsset]['buy'] += order.priceAssetAmountFmt;
@@ -261,7 +263,7 @@ export default new Vuex.Store({
       });
       return liquidity;
     },
-    getLiquidityArray: (state, getters) => _.chain(getters.getLiquidity).values().orderBy(['sell'], ['desc']).value(),
+    getLiquidityArray: (state, getters) => _.chain(getters.getLiquidity).values().orderBy([(item) => item.sum()], ['desc']).value(),
     getLogin: state => state.login,
     getAssets: state => state.assets,
     getAssetsArray: (state, getters) => _.chain(getters.getAssets).values().sortBy('name').value(),

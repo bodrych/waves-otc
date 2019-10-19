@@ -7,11 +7,16 @@
         </v-alert>
       </template>
     </notifications>
-    <v-app-bar app short>
-      <v-toolbar-title>
-        <span class="headline">OTC</span>
-      </v-toolbar-title>
-      <v-spacer></v-spacer>
+    <v-app-bar app short floating>
+      <!-- <v-img
+        :src="require('@/assets/raccoon.svg')"
+        contain
+        width="32"
+        height="32"
+        style="filter: invert(0)"
+      ></v-img> -->
+      <span class="headline">OTC</span><span class="headline font-weight-thin">Market</span>
+      <!-- <v-spacer></v-spacer> -->
       <!-- <v-btn href="https://github.com/bodrych/" target="_blank" icon><v-icon>mdi-github-circle</v-icon></v-btn> -->
     </v-app-bar>
 
