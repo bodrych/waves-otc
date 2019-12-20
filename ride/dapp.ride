@@ -3,7 +3,7 @@
 {-# SCRIPT_TYPE ACCOUNT #-}
 
 let uTokenId = base58'GHh7EMnVnUBCYNJMktuLPVr3P2oCqBCb4c87fBCZ5CzY'
-let admin = base58'GfQfmZD32YEkaMEgDUB7iesZaJf7NysjxxSheA8PzSYV'.addressFromPublicKey()
+let admin = base58'5584brtd1tLqMNJdCzvPFUEL1ujYRyi4Sy3zEZ5nTPsJ'.addressFromPublicKey()
 
 let shutdownFlag = match this.getBoolean("shutdown_flag") {
     case bool:Boolean => bool

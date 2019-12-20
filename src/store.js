@@ -82,10 +82,17 @@ export default new Vuex.Store({
         return null;
       }
       try {
+        const blocked = await window.WavesKeeper.resourceIsBlocked();
+        if (blocked) {
+          Vue.notify({ type: 'error', text: 'Api rejected by user' });
+        }
         await window.WavesKeeper.initialPromise;
         window.WavesKeeper.on('update', state => dispatch('listenKeeper', { data: state }));
-        const data = await window.WavesKeeper.publicState();
-        await dispatch('listenKeeper', { data });
+        const approved = await window.WavesKeeper.resourceIsApproved();
+        // if (approved) {
+          const data = await window.WavesKeeper.publicState();
+          await dispatch('listenKeeper', { data });
+        // }
       } catch (e) {
         Vue.notify({ type: 'error', text: e.message || 'Error' });
       }
@@ -166,8 +173,8 @@ export default new Vuex.Store({
     addAsset({ getters }, params) {
       return API.addAsset({ ...params, apiBase: getters.getApiBase });
     },
-    dexBuy({ getters }, params) {
-      return API.dexBuy({ ...params, apiBase: getters.getApiBase });
+    dexBuy(ctx, params) {
+      return API.dexBuy(params);
     },
     async showUpgradeDialog({ commit, dispatch }) {
       commit('setUpgradeDialogDisplay', true);

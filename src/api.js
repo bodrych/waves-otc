@@ -361,7 +361,7 @@ export const fetchDexOrderbook = async (asset1, asset2) => {
   return response.data;
 }
 
-export const dexBuy = async ({ amount, price, wait, apiBase }) => {
+export const dexBuy = async ({ amount, price }) => {
   const response = await axios.get(`${config.matcherApiBase}/matcher`);
   const matcherPublicKey = response.data;
   const time = Date.now();
@@ -390,10 +390,10 @@ export const dexBuy = async ({ amount, price, wait, apiBase }) => {
   }
   try {
     const response = await window.WavesKeeper.signAndPublishOrder(order);
-    if (wait) {
-      const data = JSON.parse(response);
-      // await waitForTx(data.id, { apiBase });
-    }
+    // if (wait) {
+    //   const data = JSON.parse(response);
+    //   await waitForTx(data.id, { apiBase });
+    // }
     return response;
   } catch (e) {
     throw e

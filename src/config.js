@@ -18,7 +18,7 @@ const networks = {
   },
   mainnet: {
     apiBase: 'https://nodes.wavesnodes.com/',
-    matcherApiBase: 'https://matcher.wavesplatform.com',
+    matcherApiBase: 'https://matcher.waves.exchange',
     chainId: 'W',
     dApp: '3PPpppPpSCRStzVGeZTPsZb5h467qbyqadm',
     OTCu: 'GHh7EMnVnUBCYNJMktuLPVr3P2oCqBCb4c87fBCZ5CzY',

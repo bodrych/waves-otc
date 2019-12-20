@@ -6,9 +6,10 @@ describe('otc test suite', async function () {
 
     before(async function () {
         await setupAccounts({
-            otc: 1000 * 10 ** 8,
-            taker: 1000 * 10 ** 8,
-            maker: 1000 * 10 ** 8
+            otc: 1000 * 1e8,
+            taker: 1000 * 1e8,
+            maker: 1000 * 1e8,
+            admin: 1000 * 1e8,
         });
 
         const issueOTCu = issue({ name: 'OTCu', description: '', quantity: 1000000 * 10 ** 8, decimals: 8 }, accounts.maker)
@@ -22,7 +23,7 @@ describe('otc test suite', async function () {
         }, accounts.otc);
         await broadcast(addAssets);
 
-        const script = file('dapp.ride').replace('9qh2MiJhfqNS1o3R5wcUrAAWpeqZs9R8SLwQvCx88Vaf', OTCuId)
+        const script = file('dapp.ride').replace('GHh7EMnVnUBCYNJMktuLPVr3P2oCqBCb4c87fBCZ5CzY', OTCuId).replace('5584brtd1tLqMNJdCzvPFUEL1ujYRyi4Sy3zEZ5nTPsJ', publicKey(accounts.admin))
         const compiled = compile(script);
         const ssTx = setScript({ script: compiled }, accounts.otc);
         await broadcast(ssTx);
@@ -69,7 +70,7 @@ describe('otc test suite', async function () {
         expect(broadcast(makeSell)).to.be.rejectedWith('Asset are not available for trading')
     })
 
-    it('Assets adding', async function () {
+    it.only('Assets adding', async function () {
         
         const add0Dec = invokeScript({
             dApp: address(accounts.otc),
@@ -95,7 +96,9 @@ describe('otc test suite', async function () {
         await waitForTx(add8Dec.id)
     })
 
-    it('Take sell order for dec8:WAVES', async function () {
+    let sellOrderId;
+
+    it.only('Take sell order for dec8:WAVES', async function () {
         const makeSell = invokeScript({
             dApp: address(accounts.otc),
             call: {
@@ -111,6 +114,7 @@ describe('otc test suite', async function () {
         }, accounts.maker);
 
         await broadcast(makeSell)
+        sellOrderId = makeSell.id
         await waitForTx(makeSell.id)
 
         const takeSell = invokeScript({
@@ -122,13 +126,13 @@ describe('otc test suite', async function () {
                     { type: 'string', value: '' },
                 ],
             },
-            payment: [{ assetId: null, amount: 10 * 10 ** 8 }]
+            payment: [{ assetId: null, amount: 1 * 10 ** 8 }]
         }, accounts.taker);
 
         await broadcast(takeSell)
     })
 
-    it('Take sell order for dec0:WAVES', async function () {
+    it.only('Take sell order for dec0:WAVES', async function () {
         const makeSell = invokeScript({
             dApp: address(accounts.otc),
             call: {
@@ -227,7 +231,7 @@ describe('otc test suite', async function () {
         await broadcast(takeBuy)
     })
 
-    it('Take buy order for WAVES/dec0', async function () {
+    it.only('Take buy order for WAVES/dec0', async function () {
         const makeBuy = invokeScript({
             dApp: address(accounts.otc),
             call: {
@@ -291,6 +295,86 @@ describe('otc test suite', async function () {
         }, accounts.maker);
 
         await broadcast(takeBuy)
+    })
+
+    it.only('No admin cant shutdown', async function () {
+        const shutdown = invokeScript({
+            dApp: address(accounts.otc),
+            call: {
+                function: 'shutdown',
+                args: [
+                    { type: 'string', value: 'ooops' },
+                ],
+            },
+            payment: []
+        }, accounts.maker);
+
+        expect(broadcast(shutdown)).to.be.rejectedWith('You should be an admin')
+    })
+
+    it.only('admin can shutdown', async function () {
+        const shutdown = invokeScript({
+            dApp: address(accounts.otc),
+            call: {
+                function: 'shutdown',
+                args: [
+                    { type: 'string', value: 'ooops' },
+                ],
+            },
+            payment: []
+        }, accounts.admin);
+        await broadcast(shutdown);
+        await waitForTx(shutdown.id)
+    })
+    
+    it.only('Make buy order after shutdown', async function () {
+        const makeBuy = invokeScript({
+            dApp: address(accounts.otc),
+            call: {
+                function: 'makeBuy',
+                args: [
+                    { type: 'string', value: dec8AssetId },
+                    { type: 'integer', value: 10 * 10 ** 8 },
+                    { type: 'boolean', value: false },
+                    { type: 'string', value: '' },
+                ],
+            },
+            payment: [{ assetId: null, amount: 10 * 10 ** 8 }]
+        }, accounts.maker);
+
+        expect(broadcast(makeBuy)).to.be.rejectedWith('ooops')
+    })
+    
+    it.only('Take sell order after shutdown', async function () {
+        const takeSell = invokeScript({
+            dApp: address(accounts.otc),
+            call: {
+                function: 'takeSell',
+                args: [
+                    { type: 'string', value: sellOrderId },
+                    { type: 'string', value: '' },
+                ],
+            },
+            payment: [{ assetId: dec0AssetId, amount: 1 }]
+        }, accounts.maker);
+
+        expect(broadcast(takeSell)).to.be.rejectedWith('ooops')
+    })
+    
+    it.only('Return after shutdown', async function () {
+        const returnSell = invokeScript({
+            dApp: address(accounts.otc),
+            call: {
+                function: 'returnSell',
+                args: [
+                    { type: 'string', value: sellOrderId },
+                ],
+            },
+            payment: []
+        }, accounts.admin);
+
+        await broadcast(returnSell);
+        await waitForTx(returnSell.id)
     })
 
     // it('Price asset decimals must be greater than or equal to amount asset decimals (WAVES/dec0)', async function () {

@@ -15,7 +15,8 @@
         height="32"
         style="filter: invert(0)"
       ></v-img> -->
-      <span class="headline">OTC</span><span class="headline font-weight-thin">Market</span>
+      <span class="headline">OTC</span>
+      <!-- <span class="headline font-weight-thin">Market</span> -->
       <!-- <v-spacer></v-spacer> -->
       <!-- <v-btn href="https://github.com/bodrych/" target="_blank" icon><v-icon>mdi-github-circle</v-icon></v-btn> -->
     </v-app-bar>

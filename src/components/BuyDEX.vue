@@ -76,7 +76,6 @@
 					await this.dexBuy({
 						amount: this.amount * 1e8,
 						price: this.dexData.price,
-						wait: true,
 					})
 					// this.buyLoading = false;
 				} catch(e) {
