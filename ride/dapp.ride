@@ -15,16 +15,6 @@ let shutdownMessage = match this.getString("shutdown_message") {
     case _:Unit => "Forbidden"
 }
 
-let reserve = match this.getInteger("reserve") {
-    case int:Int => int
-    case _:Unit => 0
-}
-
-let balance = match this.getInteger("balance") {
-    case int:Int => int
-    case _:Unit => 0
-}
-
 func checkStatus(address:String) = {
     let statusUnlimited = match this.getBoolean(address + "_unlimited") {
         case bool:Boolean => bool
@@ -35,6 +25,20 @@ func checkStatus(address:String) = {
         case _:Unit => 0
     }
     statusUnlimited || statusTime > lastBlock.timestamp
+}
+
+func getSupply(assetId:String) = {
+    let supply = match this.getInteger("supply_" + assetId) {
+        case int:Int => int
+        case _:Unit => 0
+    }
+    supply
+}
+
+func getFreeAmount(assetId:String) = {
+    let supply = getSupply(assetId)
+    let balance = if assetId == "WAVES" then this.wavesBalance() else this.assetBalance(assetId.fromBase58String())
+    balance - supply
 }
 
 @Callable(i)
@@ -53,13 +57,10 @@ func addAsset(assetId:String) = {
                         case _:Unit => ""
                     }
                     if assets.indexOf(assetId).isDefined() then throw("Asset is already available") else
-                        let list0 = DataEntry("assets", assets + assetId + ",")::nil
-                        let list1 = if payment.assetId == uTokenId then
-                            DataEntry("reserve", reserve + payment.amount)::list0
-                            else if !payment.assetId.isDefined() then
-                            DataEntry("balance", balance + payment.amount)::list0
-                            else list0
-                        WriteSet(list1)
+                        WriteSet(
+                            DataEntry("assets", assets + assetId + ",")
+                            ::nil
+                        )
 }
 
 @Callable(i)
@@ -86,24 +87,23 @@ func pro() = {
                 if currentUnlimited then throw("You have unlimited PRO status already. What do you want?") else
                     # 1 month avg equal to 30.44 days = 2629743 seconds
                     let month = 2629743000
-                    let list0 = DataEntry(address + "_unlimited", unlimited)::DataEntry(address + "_time", if unlimited then 0 else currentTime + month)::nil
-                    let list1 = if payment.assetId == uTokenId then
-                        DataEntry("reserve", reserve + payment.amount)::list0
-                        else if !payment.assetId.isDefined() then
-                        DataEntry("balance", balance + payment.amount)::list0
-                        else list0
-                    WriteSet(list1)
+                    WriteSet(
+                        DataEntry(address + "_unlimited", unlimited)
+                        ::DataEntry(address + "_time", if unlimited then 0 else currentTime + month)
+                        ::nil
+                    )
 }
 
 @Callable(i)
 func buyUtilityToken() = {
+    # 1 by 1
     if shutdownFlag then throw(shutdownMessage) else
         let payment = i.payment.valueOrErrorMessage("Where is payment?")
         if payment.assetId.isDefined() then throw("WAVES only") else
-            if payment.amount > reserve then throw("Not enougth asset in dApp") else
-                ScriptResult(
-                    WriteSet(DataEntry("reserve", reserve - payment.amount)::DataEntry("balance", balance + payment.amount)::nil),
-                    TransferSet(ScriptTransfer(i.caller, payment.amount, uTokenId)::nil)
+            if payment.amount > getFreeAmount(uTokenId.toBase58String())  then throw("Not enougth asset in dApp") else
+                TransferSet(
+                    ScriptTransfer(i.caller, payment.amount, uTokenId)
+                    ::nil
                 )
 }
 
@@ -135,7 +135,11 @@ func makeSell(priceAsset:String, priceAssetAmount:Int, all:Boolean, password:Str
                                         + "_" + all.toString()
                                         + "_" + password
                                         + "_" + 0.toString() # spent
-                                    WriteSet(DataEntry(orderId, data)::nil)
+                                    WriteSet(
+                                        DataEntry(orderId, data)
+                                        ::DataEntry("supply_" + amountAsset, getSupply(amountAsset) + payment.amount)
+                                        ::nil
+                                    )
 }
 
 @Callable(i)
@@ -166,7 +170,11 @@ func makeBuy(amountAsset:String, amount:Int, all:Boolean, password:String) = {
                                             + "_" + all.toString()
                                             + "_" + password
                                             + "_" + 0.toString()
-                                        WriteSet(DataEntry(orderId, data)::nil)
+                                        WriteSet(
+                                            DataEntry(orderId, data)
+                                            ::DataEntry("supply_" + priceAsset, getSupply(priceAsset) + priceAssetAmount)
+                                            ::nil
+                                        )
 }
 
 @Callable(i)
@@ -206,8 +214,16 @@ func takeSell(id:String, sig:String) = {
                                     let toCaller = ScriptTransfer(i.caller, amount, if orderAmountAsset == "WAVES" then unit else orderAmountAsset.fromBase58String())
                                     let toOwner = ScriptTransfer(orderOwner, priceAssetAmount, if orderPriceAsset == "WAVES" then unit else orderPriceAsset.fromBase58String())
                                     ScriptResult(
-                                        WriteSet(DataEntry(orderId, newData)::nil),
-                                        TransferSet(toCaller::toOwner::nil)
+                                        WriteSet(
+                                            DataEntry(orderId, newData)
+                                            ::DataEntry("supply_" + orderAmountAsset, getSupply(orderAmountAsset) - amount)
+                                            ::nil
+                                        ),
+                                        TransferSet(
+                                            toCaller
+                                            ::toOwner
+                                            ::nil
+                                        )
                                     )
 }
 
@@ -248,8 +264,16 @@ func takeBuy(id:String, sig:String) = {
                                     let toCaller = ScriptTransfer(i.caller, priceAssetAmount, if orderPriceAsset == "WAVES" then unit else orderPriceAsset.fromBase58String())
                                     let toOwner = ScriptTransfer(orderOwner, amount, if orderAmountAsset == "WAVES" then unit else orderAmountAsset.fromBase58String())
                                     ScriptResult(
-                                        WriteSet(DataEntry(orderId, newData)::nil),
-                                        TransferSet(toCaller::toOwner::nil)
+                                        WriteSet(
+                                            DataEntry(orderId, newData)
+                                            ::DataEntry("supply_" + orderPriceAsset, getSupply(orderPriceAsset) - priceAssetAmount)
+                                            ::nil
+                                        ),
+                                        TransferSet(
+                                            toCaller
+                                            ::toOwner
+                                            ::nil
+                                        )
                                     )
 }
 
@@ -276,8 +300,15 @@ func returnSell(id:String) = {
             if returnAmount <= 0 then throw("Nothing to return") else
                 let newData = data.dropRight(parts[8].size()) + (orderAmount).toString()
                 ScriptResult(
-                    WriteSet(DataEntry(orderId, newData)::nil),
-                    TransferSet(ScriptTransfer(orderOwner, returnAmount, if orderAmountAsset == "WAVES" then unit else orderAmountAsset.fromBase58String())::nil)
+                    WriteSet(
+                        DataEntry(orderId, newData)
+                        ::DataEntry("supply_" + orderAmountAsset, getSupply(orderAmountAsset) - returnAmount)
+                        ::nil
+                    ),
+                    TransferSet(
+                        ScriptTransfer(orderOwner, returnAmount, if orderAmountAsset == "WAVES" then unit else orderAmountAsset.fromBase58String())
+                        ::nil
+                    )
                 )
 }
 
@@ -304,34 +335,25 @@ func returnBuy(id:String) = {
             if returnAmount <= 0 then throw("Nothing to return") else
                 let newData = data.dropRight(parts[8].size()) + (orderPriceAssetAmount).toString()
                 ScriptResult(
-                    WriteSet(DataEntry(orderId, newData)::nil),
-                    TransferSet(ScriptTransfer(orderOwner, returnAmount, if orderPriceAsset == "WAVES" then unit else orderPriceAsset.fromBase58String())::nil)
+                    WriteSet(
+                        DataEntry(orderId, newData)
+                        ::DataEntry("supply_" + orderPriceAsset, getSupply(orderPriceAsset) - returnAmount)
+                        ::nil
+                    ),
+                    TransferSet(
+                        ScriptTransfer(orderOwner, returnAmount, if orderPriceAsset == "WAVES" then unit else orderPriceAsset.fromBase58String())
+                        ::nil
+                    )
                 )
 }
 
 @Callable(i)
-func withdraw(mode:String) = {
-    # balance - free WAVES
-    # reserve - free OTCu
+func withdraw(assetId:String, amount:Int) = {
     if i.caller != admin then throw("You should be an admin") else
-        if mode != "balance" && mode != "reserve" && mode != "all" then throw("Specify the mode: balance, reserve or all") else
-            let balanceEntry = DataEntry("balance", 0)
-            let balanceTransfer = ScriptTransfer(admin, balance, unit)
-            let reserveEntry = DataEntry("reserve", 0)
-            let reserveTransfer = ScriptTransfer(admin, reserve, unit)
-            let writeSet =
-                if mode == "balance" then balanceEntry::nil
-                else if mode == "reserve" then reserveEntry::nil
-                else if mode == "all" then balanceEntry::reserveEntry::nil
-                else nil
-            let transferSet =
-                if mode == "balance" then balanceTransfer::nil
-                else if mode == "reserve" then reserveTransfer::nil
-                else if mode == "all" then balanceTransfer::reserveTransfer::nil
-                else nil
-            ScriptResult(
-                WriteSet(writeSet),
-                TransferSet(transferSet)
+        if getFreeAmount(assetId) < amount then throw("Not enougth asset balance") else
+            TransferSet(
+                ScriptTransfer(admin, amount, if assetId == "WAVES" then unit else assetId.fromBase58String())
+                ::nil
             )
 }
 

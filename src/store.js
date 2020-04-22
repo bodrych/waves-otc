@@ -82,15 +82,15 @@ export default new Vuex.Store({
         return null;
       }
       try {
-        const blocked = await window.WavesKeeper.resourceIsBlocked();
+        const keeperApi = await window.WavesKeeper.initialPromise;
+        const blocked = await keeperApi.resourceIsBlocked();
         if (blocked) {
           Vue.notify({ type: 'error', text: 'Api rejected by user' });
         }
-        await window.WavesKeeper.initialPromise;
-        window.WavesKeeper.on('update', state => dispatch('listenKeeper', { data: state }));
-        const approved = await window.WavesKeeper.resourceIsApproved();
+        keeperApi.on('update', state => dispatch('listenKeeper', { data: state }));
+        const approved = await keeperApi.resourceIsApproved();
         // if (approved) {
-          const data = await window.WavesKeeper.publicState();
+          const data = await keeperApi.publicState();
           await dispatch('listenKeeper', { data });
         // }
       } catch (e) {
